@@ -1,10 +1,10 @@
 import os
 from flask import Flask, send_from_directory, jsonify, render_template
 
-app = Flask(__name__)
+app = Flask(__name__,template_folder="C:/Users/leona/Desktop/Code 2025/YouTubeMusicDownloader/templates")
 
 # Set the directory where your music is stored
-MUSIC_DIR = "Piano"
+MUSIC_DIR = "C:/Users/leona/Desktop/Code 2025/YouTubeMusicDownloader/Music"
 
 @app.route('/')
 def index():
