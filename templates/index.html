@@ -30,8 +30,10 @@
         .song-details {
         color: white;
         margin: 0;
-        /* margin-top: 40px; */
-        padding-top: 20px;
+        padding: 25px;
+        padding-bottom: 0px;   
+        max-width: 500px; 
+        margin: 0 auto;
     }
     
     .song-artist {
@@ -144,6 +146,7 @@
                                     let songList = {{ music_files| tojson }};
         let currentSongIndex = 0;
         let shuffleMode = false;
+        let playedSongs = new Set();
 
             function parseSongMetadata(filename) {
                 // Expected format: "Artist - Title (Year).mp3"
@@ -191,7 +194,6 @@
             get_downloads_folder();
 
 
-
         function updatePlaylist(files) {
             const playlist = document.getElementById('playlist');
             playlist.innerHTML = '';
@@ -216,7 +218,7 @@
             });
             playlist.appendChild(button);
         });
-                                    }
+        }
 
 
             function updateMediaInfo(song) {
@@ -262,7 +264,16 @@
                 if (songList.length === 0) return;
 
                 if (shuffleMode) {
-                    currentSongIndex = Math.floor(Math.random() * songList.length);
+                    if (playedSongs.size === songList.length) {
+                        // Reset played songs if all have been played
+                        playedSongs.clear();
+                    }
+                    let nextSong;
+                    do {
+                        nextSong = songList[Math.floor(Math.random() * songList.length)];
+                    } while (playedSongs.has(nextSong));
+                    playedSongs.add(nextSong);
+                    currentSongIndex = songList.indexOf(nextSong);
                 } else {
                     currentSongIndex = (currentSongIndex + 1) % songList.length;
                 }
