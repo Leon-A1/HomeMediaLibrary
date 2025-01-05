@@ -95,11 +95,11 @@
         <button id="shuffleButton" class="shuffle-mode">Shuffle Play</button>
         <button id="nextButton">Next Song</button>
     </div>
-    <div id="playlist">
-        {% for song in music_files %}
+        <div id="playlist">
+            {% for song in music_files %}
             <button class="play-button" data-song="{{ song }}">{{ song }}</button>
-        {% endfor %}
-    </div>
+            {% endfor %}
+            </div>
 
 
 
@@ -113,6 +113,24 @@
                                     let songList = {{ music_files| tojson }};
         let currentSongIndex = 0;
         let shuffleMode = false;
+
+    function display_elements(songList) {
+        if (songList.length == 0) {
+            playlist_element = document.getElementById('playlist');
+            controls_element = document.getElementById('controls');
+            playlist_element.style.display = 'none';
+            controls_element.style.display = 'none';
+        } else {
+            playlist_element = document.getElementById('playlist');
+            controls_element = document.getElementById('controls');
+            playlist_element.style.display = 'block';
+            controls_element.style.display = 'block';
+
+        }
+    }
+    display_elements(songList);
+
+
                                     let currentFolder = '';
 
                                     // Update playlist when folder changes
@@ -122,6 +140,7 @@
                                         const files = await response.json();
                                         // Store full paths in songList
                                         songList = files.map(file => currentFolder ? `${currentFolder}/${file}` : file);
+                                        display_elements(songList);
                                         updatePlaylist(files);
                                     });
 
