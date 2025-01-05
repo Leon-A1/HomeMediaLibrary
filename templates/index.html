@@ -106,6 +106,64 @@
             max-width: 400px;
             color-scheme: dark;
         }
+        .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+        margin: 0 10px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #333;
+        transition: .4s;
+        border-radius: 34px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+        background-color: #db29b4;
+    }
+
+    input:checked + .toggle-slider:before {
+        transform: translateX(26px);
+    }
+
+    .toggle-container {
+        display: inline-flex;
+        align-items: center;
+        margin: 0 10px;
+    }
+
+    .toggle-label {
+        color: white;
+        margin: 0 0px;
+        font-size: 16px;
+        font-weight: 900;
+    }
     </style>
 </head>
 <body>
@@ -128,8 +186,20 @@
         </select>
     </div>
     <div id="controls">
-        <button id="shuffleButton">Shuffle Play</button>
-        <button id="repeatButton">Play Once</button>
+        <div class="toggle-container">
+            <span class="toggle-label">Shuffle</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="shuffleToggle">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="toggle-container">
+            <span class="toggle-label">1</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="repeatToggle">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
         <button id="nextButton">Next Song</button>
     </div>
         <div id="playlist">
@@ -144,7 +214,7 @@
         const audioPlayer = document.getElementById('audioPlayer');
         const audioSource = document.getElementById('audioSource');
         const playButtons = document.querySelectorAll('.play-button');
-        const shuffleButton = document.getElementById('shuffleButton');
+
         const nextButton = document.getElementById('nextButton');
                 const folderSelector = document.getElementById('folderSelector');
                 let songList = {{ music_files| tojson }};
@@ -152,15 +222,19 @@
         let shuffleMode = false;
         let playedSongs = new Set();
                 let repeatMode = false;
-                const repeatButton = document.getElementById('repeatButton');
-                repeatButton.addEventListener('click', () => {
-                    repeatMode = !repeatMode;
-                    if (repeatMode) {
-                        repeatButton.classList.add('repeat-mode');
-                    } else {
-                        repeatButton.classList.remove('repeat-mode');
-                    }
-                });
+                                const shuffleToggle = document.getElementById('shuffleToggle');
+                                const repeatToggle = document.getElementById('repeatToggle');
+                                shuffleToggle.addEventListener('change', () => {
+                                    shuffleMode = shuffleToggle.checked;
+                                    if (shuffleMode) {
+                                        playNextSong();
+                                    }
+                                });
+
+    repeatToggle.addEventListener('change', () => {
+        repeatMode = repeatToggle.checked;
+    });
+
             function parseSongMetadata(filename) {
                 // Expected format: "Artist - Title (Year).mp3"
                 const withoutExt = filename.split('.').slice(0, -1).join('.');
