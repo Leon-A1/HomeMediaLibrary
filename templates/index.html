@@ -82,6 +82,13 @@
         <source id="audioSource" src="" type="audio/mp3">
         Your browser does not support the audio element.
     </audio>
+    <div id="folderSelect">
+        <select id="folderSelector" style="margin: 20px; padding: 10px; font-size: 16px;">
+            {% for folder in folders %}
+            <option value="{{ folder }}">{{ folder if folder else 'Music (Root)' }}</option>
+            {% endfor %}
+        </select>
+    </div>
     <div id="controls">
         <button id="shuffleButton" class="shuffle-mode">Shuffle Play</button>
         <button id="nextButton">Next Song</button>
@@ -100,19 +107,46 @@
         const playButtons = document.querySelectorAll('.play-button');
         const shuffleButton = document.getElementById('shuffleButton');
         const nextButton = document.getElementById('nextButton');
-        let songList = {{ music_files|tojson }};
+                                    const folderSelector = document.getElementById('folderSelector');
+                                    let songList = {{ music_files| tojson }};
         let currentSongIndex = 0;
         let shuffleMode = false;
+                                    let currentFolder = '';
 
-        // Set the source of the audio to the selected song
+                                    // Update playlist when folder changes
+                                    folderSelector.addEventListener('change', async function () {
+                                        currentFolder = this.value;
+                                        const response = await fetch(`/folder/${currentFolder}`);
+                                        const files = await response.json();
+                                        // Store full paths in songList
+                                        songList = files.map(file => currentFolder ? `${currentFolder}/${file}` : file);
+                                        updatePlaylist(files);
+                                    });
+
+                                    function updatePlaylist(files) {
+                                        const playlist = document.getElementById('playlist');
+                                        playlist.innerHTML = '';
+                                        files.forEach(file => {
+                                            const button = document.createElement('button');
+                                            button.className = 'play-button';
+                                            const songPath = currentFolder ? `${currentFolder}/${file}` : file;
+                                            button.setAttribute('data-song', songPath);
+                                            button.textContent = file;
+                                            button.addEventListener('click', function () {
+                                                playSong(this.getAttribute('data-song'));
+                                            });
+                                            playlist.appendChild(button);
+                                        });
+                                    }
+
         function playSong(song) {
             audioSource.src = `/music/${song}`;
             audioPlayer.load();
             audioPlayer.play();
-            const song_name = document.getElementById('song-name');
-            song_name.textContent = song;
-
-        }
+        document.getElementById('song-name').textContent = song.split('/').pop();
+        // Update currentSongIndex to match current song
+        currentSongIndex = songList.indexOf(song);
+    }
 
         function playNextSong() {
             if (shuffleMode) {
