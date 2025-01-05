@@ -4,7 +4,7 @@ from flask import Flask, send_from_directory, jsonify, render_template
 app = Flask(__name__)
 
 # Set the directory where your music is stored
-MUSIC_DIR = "Music"
+MUSIC_DIR = "Piano"
 
 @app.route('/')
 def index():

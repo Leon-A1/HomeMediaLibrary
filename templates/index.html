@@ -6,59 +6,120 @@
     <title>Music Player</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: #f4f4f4;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            padding: 0;
+            margin: 0;
+            background-color: #000;
+            color: #333;
+            text-align: center;
         }
         h1 {
-            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
         }
         #playlist {
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-        button {
-            margin: 10px;
             padding: 10px;
+            background-color: #333;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 0 auto;
+            margin-bottom: 10px;
+        }
+        #playlist button {
+            margin: 8px;
+            padding: 12px 20px;
             font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
             cursor: pointer;
+            width: calc(100% - 2rem);
+            transition: background-color 0.3s;
+        }
+        #playlist button:hover {
+            background-color: #45a049;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+        #controls button {
+            margin: 0 10px;
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-bottom: 20px;
+
+        }
+        #controls button:hover {
+            background-color: #0056b3;
         }
         audio {
             margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .shuffle-mode {
+            background-color: #ff9800;
+        }
+        .shuffle-mode:hover {
+            background-color: #e68900;
         }
     </style>
 </head>
 <body>
-    <h1>Music Player</h1>
+    <h2 id="song-name">Music Player</h2>
+    <audio id="audioPlayer" controls>
+        <source id="audioSource" src="" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
+    <div id="controls">
+        <button id="shuffleButton" class="shuffle-mode">Shuffle Play</button>
+        <button id="nextButton">Next Song</button>
+    </div>
     <div id="playlist">
         {% for song in music_files %}
             <button class="play-button" data-song="{{ song }}">{{ song }}</button>
         {% endfor %}
     </div>
 
-    <audio id="audioPlayer" controls>
-        <source id="audioSource" src="" type="audio/mp3">
-        Your browser does not support the audio element.
-    </audio>
+
 
     <script>
         const audioPlayer = document.getElementById('audioPlayer');
         const audioSource = document.getElementById('audioSource');
         const playButtons = document.querySelectorAll('.play-button');
+        const shuffleButton = document.getElementById('shuffleButton');
+        const nextButton = document.getElementById('nextButton');
         let songList = {{ music_files|tojson }};
         let currentSongIndex = 0;
+        let shuffleMode = false;
 
         // Set the source of the audio to the selected song
         function playSong(song) {
             audioSource.src = `/music/${song}`;
             audioPlayer.load();
             audioPlayer.play();
+            const song_name = document.getElementById('song-name');
+            song_name.textContent = song;
+
         }
 
-        // Play the next song
         function playNextSong() {
-            currentSongIndex = (currentSongIndex + 1) % songList.length;
+            if (shuffleMode) {
+                currentSongIndex = Math.floor(Math.random() * songList.length);
+            } else {
+                currentSongIndex = (currentSongIndex + 1) % songList.length;
+            }
             playSong(songList[currentSongIndex]);
         }
 
@@ -71,6 +132,16 @@
 
         // Play next song when the current one ends
         audioPlayer.addEventListener('ended', playNextSong);
+
+    // Shuffle the playlist when the shuffle button is clicked
+    shuffleButton.addEventListener('click', function () {
+        shuffleMode = true;
+        playNextSong();  // Start playing shuffled songs immediately
+        shuffleButton.classList.add('shuffle-mode');  // Indicate shuffle mode is on
+    });
+
+    // Play the next song when "Next Song" button is clicked
+    nextButton.addEventListener('click', playNextSong);
     </script>
 </body>
 </html>
