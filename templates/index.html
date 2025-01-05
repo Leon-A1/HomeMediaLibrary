@@ -4,11 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Player</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FF0033'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E">
     <style>
         body {
-            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
             padding: 0;
             margin: 0;
             background-color: #000;
@@ -16,9 +19,33 @@
             text-align: center;
         }
         h1 {
-            margin-bottom: 20px;
+            margin-bottom:0px;
             color: #333;
         }
+        #song-name{
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+        }
+        .song-details {
+        color: white;
+        margin: 0;
+        /* margin-top: 40px; */
+        padding-top: 20px;
+    }
+    
+    .song-artist {
+        color: #888;
+        font-size: 0.9em;
+        display: block;
+    }
+    
+    .song-year {
+        color: #666;
+        font-size: 0.8em;
+        margin-left: 10px;
+    }
+
         #playlist {
             display: flex;
             flex-direction: column;
@@ -42,12 +69,15 @@
             cursor: pointer;
             width: calc(100% - 2rem);
             transition: background-color 0.3s;
+            text-align: left;
+        padding: 12px 20px;
+        line-height: 1.4;
         }
         #playlist button:hover {
             background-color: #f81f4b;
         }
         #controls {
-            margin-top: 20px;
+            margin-top: 0px;
         }
         #controls button {
             margin: 0 10px;
@@ -66,7 +96,8 @@
             background-color: #565656;
         }
         audio {
-            margin-top: 20px;
+            margin-top: 10px;
+            margin-bottom: 0;
             width: 100%;
             max-width: 400px;
         }
@@ -79,7 +110,11 @@
     </style>
 </head>
 <body>
-    <h2 id="song-name">Music Player</h2>
+    <div class="song-details">
+        <span id="song-name">Music Player</span>
+        <span id="song-artist" class="song-artist"></span>
+        <span id="song-year" class="song-year"></span>
+    </div>
     <audio id="audioPlayer" controls>
         <source id="audioSource" src="" type="audio/mp3">
         Your browser does not support the audio element.
@@ -115,7 +150,21 @@
                                     let songList = {{ music_files| tojson }};
         let currentSongIndex = 0;
         let shuffleMode = false;
+                                                                                                        function parseSongMetadata(filename) {
+                                                                                                            // Expected format: "Artist - Title (Year).mp3"
+                                                                                                            const withoutExt = filename.split('.').slice(0, -1).join('.');
+                                                                                                            const yearMatch = withoutExt.match(/\((\d{4})\)$/);
+                                                                                                            const year = yearMatch ? yearMatch[1] : '';
+                                                                                                            const nameWithoutYear = withoutExt.replace(/\s*\(\d{4}\)$/, '');
+                                                                                                            const [artist, ...titleParts] = nameWithoutYear.split(' - ');
+                                                                                                            const title = titleParts.join(' - ') || artist;
 
+                                                                                                        return {
+                                                                                                            artist: titleParts.length ? artist : '',
+                                                                                                            title: title,
+                                                                                                            year: year
+                                                                                                        };
+                                                                                                    }
     function display_elements(songList) {
         if (songList.length == 0) {
             playlist_element = document.getElementById('playlist');
@@ -154,7 +203,17 @@
                                             button.className = 'play-button';
                                             const songPath = currentFolder ? `${currentFolder}/${file}` : file;
                                             button.setAttribute('data-song', songPath);
-            button.textContent = file.split('.').slice(0, -1).join('.'); // Remove extension
+
+                                            const metadata = parseSongMetadata(file);
+                                            let displayText = metadata.title;
+                                            if (metadata.artist) {
+                                                displayText = `${metadata.artist} - ${metadata.title}`;
+                                            }
+                                            if (metadata.year) {
+                                                displayText += ` (${metadata.year})`;
+                                            }
+
+                                            button.textContent = displayText;
             button.addEventListener('click', function () {
                 playSong(this.getAttribute('data-song'));
             });
@@ -163,28 +222,23 @@
                                     }
 
 
-    function updateMediaInfo(song) {
-        // Update page title
-        const songName = song.split('/').pop().split('.').slice(0, -1).join('.');
-        document.title = songName || 'Music Player';
+                                        function updateMediaInfo(song) {
+                                        const metadata = parseSongMetadata(song.split('/').pop());
 
-        // Setup Media Session API
+                                        // Update UI
+                                        document.title = metadata.title;
+                                        document.getElementById('song-name').textContent = metadata.title;
+                                        document.getElementById('song-artist').textContent = metadata.artist;
+                                        document.getElementById('song-year').textContent = metadata.year ? `(${metadata.year})` : '';
+
+                                        // Update Media Session API
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
-                title: songName,
-                artist: 'Music Player',
+                title: metadata.title,
+                artist: metadata.artist,
                 artwork: [
                     { src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF0033"%3E%3Cpath d="M8 5v14l11-7z"/%3E%3C/svg%3E' }
                 ]
-            });
-
-            // Add media session handlers
-            navigator.mediaSession.setActionHandler('play', () => audioPlayer.play());
-            navigator.mediaSession.setActionHandler('pause', () => audioPlayer.pause());
-            navigator.mediaSession.setActionHandler('nexttrack', playNextSong);
-            navigator.mediaSession.setActionHandler('previoustrack', () => {
-                currentSongIndex = (currentSongIndex - 1 + songList.length) % songList.length;
-                playSong(songList[currentSongIndex]);
             });
         }
     }
@@ -192,10 +246,25 @@
             audioSource.src = `/music/${song}`;
             audioPlayer.load();
             audioPlayer.play();
-        document.getElementById('song-name').textContent = song.split('/').pop();
             updateMediaInfo(song);
         currentSongIndex = songList.indexOf(song);
     }
+
+            // Add event listener for when song ends
+            audioPlayer.addEventListener('ended', () => {
+                playNextSong();
+            });
+
+            // Add event listener for next button
+            nextButton.addEventListener('click', () => {
+                playNextSong();
+            });
+
+            // Add event listener for shuffle button
+            shuffleButton.addEventListener('click', () => {
+                shuffleMode = !shuffleMode;
+                shuffleButton.classList.toggle('active');
+            });
 
         function playNextSong() {
             if (shuffleMode) {
