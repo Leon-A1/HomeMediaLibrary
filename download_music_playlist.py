@@ -2,8 +2,8 @@ import os
 import subprocess
 
 # Define the playlist URL and output folder
-playlist_url = "https://music.youtube.com/playlist?list=PLpDHBn_bSGr63dPIsvTRF271Qjb0SJkMG&si=jAywKLWIKaUnjWn9"
-output_folder = "Music"
+playlist_url = "https://music.youtube.com/playlist?list=PLpDHBn_bSGr7JwmX7udppv9JsgiVTZ875&si=FT69vovOL2fLDfso"
+output_folder = "Music/Downloads"
 
 # Create the output folder if it doesn't exist
 if not os.path.exists(output_folder):

@@ -101,12 +101,6 @@
             width: 100%;
             max-width: 400px;
         }
-        .shuffle-mode {
-            background-color: #ff9800;
-        }
-        .shuffle-mode:hover {
-            background-color: #e68900;
-        }
     </style>
 </head>
 <body>
@@ -223,13 +217,13 @@
 
 
                                         function updateMediaInfo(song) {
-                                        const metadata = parseSongMetadata(song.split('/').pop());
+                                            const metadata = parseSongMetadata(song.split('/').pop());
 
-                                        // Update UI
-                                        document.title = metadata.title;
-                                        document.getElementById('song-name').textContent = metadata.title;
-                                        document.getElementById('song-artist').textContent = metadata.artist;
-                                        document.getElementById('song-year').textContent = metadata.year ? `(${metadata.year})` : '';
+                                            // Update UI
+                                            document.title = metadata.title;
+                                            document.getElementById('song-name').textContent = metadata.title;
+                                            document.getElementById('song-artist').textContent = metadata.artist;
+                                            document.getElementById('song-year').textContent = metadata.year ? `(${metadata.year})` : '';
 
                                         // Update Media Session API
         if ('mediaSession' in navigator) {
@@ -239,6 +233,15 @@
                 artwork: [
                     { src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF0033"%3E%3Cpath d="M8 5v14l11-7z"/%3E%3C/svg%3E' }
                 ]
+            });
+
+            // Set media session action handlers
+            navigator.mediaSession.setActionHandler('play', () => audioPlayer.play());
+            navigator.mediaSession.setActionHandler('pause', () => audioPlayer.pause());
+            navigator.mediaSession.setActionHandler('nexttrack', playNextSong);
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                currentSongIndex = (currentSongIndex - 1 + songList.length) % songList.length;
+                playSong(songList[currentSongIndex]);
             });
         }
     }
@@ -250,50 +253,26 @@
         currentSongIndex = songList.indexOf(song);
     }
 
-            // Add event listener for when song ends
-            audioPlayer.addEventListener('ended', () => {
-                playNextSong();
-            });
 
-            // Add event listener for next button
-            nextButton.addEventListener('click', () => {
-                playNextSong();
-            });
+                                            function playNextSong() {
+                                            if (songList.length === 0) return;
+                                        
+                                            if (shuffleMode) {
+                                                currentSongIndex = Math.floor(Math.random() * songList.length);
+                                            } else {
+                                                currentSongIndex = (currentSongIndex + 1) % songList.length;
+                                            }
+                                            playSong(songList[currentSongIndex]);
+                                        }
 
-            // Add event listener for shuffle button
+
+                                            audioPlayer.addEventListener('ended', playNextSong);
+            nextButton.addEventListener('click', playNextSong);
             shuffleButton.addEventListener('click', () => {
-                shuffleMode = !shuffleMode;
-                shuffleButton.classList.toggle('active');
-            });
-
-        function playNextSong() {
-            if (shuffleMode) {
-                currentSongIndex = Math.floor(Math.random() * songList.length);
-            } else {
-                currentSongIndex = (currentSongIndex + 1) % songList.length;
-            }
-            playSong(songList[currentSongIndex]);
-        }
-
-        // Add event listeners to play buttons
-        playButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                playSong(this.getAttribute('data-song'));
-            });
+                shuffleMode = true;
+            playNextSong()
+            shuffleButton.classList.toggle('shuffle-mode');
         });
-
-        // Play next song when the current one ends
-        audioPlayer.addEventListener('ended', playNextSong);
-
-    // Shuffle the playlist when the shuffle button is clicked
-    shuffleButton.addEventListener('click', function () {
-        shuffleMode = true;
-        playNextSong();  // Start playing shuffled songs immediately
-        shuffleButton.classList.add('shuffle-mode');  // Indicate shuffle mode is on
-    });
-
-    // Play the next song when "Next Song" button is clicked
-    nextButton.addEventListener('click', playNextSong);
     </script>
 </body>
 </html>
