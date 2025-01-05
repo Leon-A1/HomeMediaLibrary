@@ -87,7 +87,9 @@
     <div id="folderSelect">
         <select id="folderSelector" style="margin: 20px; padding: 10px; font-size: 16px;">
             {% for folder in folders %}
-            <option value="{{ folder }}">{{ folder if folder else 'Music (Root)' }}</option>
+                <option value="{{ folder }}">
+                    {{ folder if folder else 'Music (Root)' }} ({{ folder_counts[folder] }})
+                </option>
             {% endfor %}
         </select>
     </div>
@@ -160,12 +162,38 @@
         });
                                     }
 
+
+    function updateMediaInfo(song) {
+        // Update page title
+        const songName = song.split('/').pop().split('.').slice(0, -1).join('.');
+        document.title = songName || 'Music Player';
+
+        // Setup Media Session API
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: songName,
+                artist: 'Music Player',
+                artwork: [
+                    { src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF0033"%3E%3Cpath d="M8 5v14l11-7z"/%3E%3C/svg%3E' }
+                ]
+            });
+
+            // Add media session handlers
+            navigator.mediaSession.setActionHandler('play', () => audioPlayer.play());
+            navigator.mediaSession.setActionHandler('pause', () => audioPlayer.pause());
+            navigator.mediaSession.setActionHandler('nexttrack', playNextSong);
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                currentSongIndex = (currentSongIndex - 1 + songList.length) % songList.length;
+                playSong(songList[currentSongIndex]);
+            });
+        }
+    }
         function playSong(song) {
             audioSource.src = `/music/${song}`;
             audioPlayer.load();
             audioPlayer.play();
         document.getElementById('song-name').textContent = song.split('/').pop();
-        // Update currentSongIndex to match current song
+            updateMediaInfo(song);
         currentSongIndex = songList.indexOf(song);
     }
 

@@ -8,19 +8,31 @@ MUSIC_DIR = "C:/Users/leona/Desktop/Code 2025/YouTubeMusicDownloader/Music"
 
 @app.route('/')
 def index():
-    # Get folders in MUSIC_DIR
-    folders = [''] # Empty string represents root Music folder
+    # Get folders and their file counts
+    folders = ['']  # Empty string represents root Music folder
+    folder_counts = {}
+    
+    # Count files in root folder
+    root_files = [f for f in os.listdir(MUSIC_DIR) 
+                  if os.path.isfile(os.path.join(MUSIC_DIR, f)) 
+                  and f.lower().endswith(('.mp3', '.wav', '.flac', '.aac'))]
+    folder_counts[''] = len(root_files)
+    
+    # Count files in subfolders
     for item in os.listdir(MUSIC_DIR):
         if os.path.isdir(os.path.join(MUSIC_DIR, item)):
             folders.append(item)
+            folder_path = os.path.join(MUSIC_DIR, item)
+            files = [f for f in os.listdir(folder_path) 
+                    if os.path.isfile(os.path.join(folder_path, f)) 
+                    and f.lower().endswith(('.mp3', '.wav', '.flac', '.aac'))]
+            folder_counts[item] = len(files)
     
-    # Get music files from root Music folder
-    music_files = []
-    for file in os.listdir(MUSIC_DIR):
-        if os.path.isfile(os.path.join(MUSIC_DIR, file)) and file.lower().endswith(('.mp3', '.wav', '.flac', '.aac')):
-            music_files.append(file)
-    
-    return render_template('index.html', music_files=music_files, folders=folders, current_folder='')
+    return render_template('index.html', 
+                         music_files=root_files, 
+                         folders=folders, 
+                         folder_counts=folder_counts, 
+                         current_folder='')
 
 @app.route('/folder/<path:folder_name>')
 def get_folder_contents(folder_name):
