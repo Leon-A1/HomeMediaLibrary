@@ -22,6 +22,9 @@
             margin-bottom:0px;
             color: #333;
         }
+        .repeat-mode {
+            background-color: #db29b4;
+        }
         #song-name{
             font-size: 2em;
             font-weight: bold;
@@ -126,6 +129,7 @@
     </div>
     <div id="controls">
         <button id="shuffleButton">Shuffle Play</button>
+        <button id="repeatButton">Play Once</button>
         <button id="nextButton">Next Song</button>
     </div>
         <div id="playlist">
@@ -142,12 +146,21 @@
         const playButtons = document.querySelectorAll('.play-button');
         const shuffleButton = document.getElementById('shuffleButton');
         const nextButton = document.getElementById('nextButton');
-                                    const folderSelector = document.getElementById('folderSelector');
-                                    let songList = {{ music_files| tojson }};
+                const folderSelector = document.getElementById('folderSelector');
+                let songList = {{ music_files| tojson }};
         let currentSongIndex = 0;
         let shuffleMode = false;
         let playedSongs = new Set();
-
+                let repeatMode = false;
+                const repeatButton = document.getElementById('repeatButton');
+                repeatButton.addEventListener('click', () => {
+                    repeatMode = !repeatMode;
+                    if (repeatMode) {
+                        repeatButton.classList.add('repeat-mode');
+                    } else {
+                        repeatButton.classList.remove('repeat-mode');
+                    }
+                });
             function parseSongMetadata(filename) {
                 // Expected format: "Artist - Title (Year).mp3"
                 const withoutExt = filename.split('.').slice(0, -1).join('.');
@@ -292,7 +305,11 @@
                     updatePlaylist(files);
                 });
 
-                                            audioPlayer.addEventListener('ended', playNextSong);
+                    audioPlayer.addEventListener('ended', () => {
+                        if (!repeatMode) {
+                            playNextSong();
+                        }
+                    });
             nextButton.addEventListener('click', playNextSong);
             shuffleButton.addEventListener('click', () => {
                 shuffleMode = !shuffleMode;
