@@ -97,7 +97,7 @@
     </div>
         <div id="playlist">
             {% for song in music_files %}
-            <button class="play-button" data-song="{{ song }}">{{ song }}</button>
+            <button class="play-button" data-song="{{ song }}">{{ song.rsplit('.', 1)[0] }}</button>
             {% endfor %}
             </div>
 
@@ -152,12 +152,12 @@
                                             button.className = 'play-button';
                                             const songPath = currentFolder ? `${currentFolder}/${file}` : file;
                                             button.setAttribute('data-song', songPath);
-                                            button.textContent = file;
-                                            button.addEventListener('click', function () {
-                                                playSong(this.getAttribute('data-song'));
-                                            });
-                                            playlist.appendChild(button);
-                                        });
+            button.textContent = file.split('.').slice(0, -1).join('.'); // Remove extension
+            button.addEventListener('click', function () {
+                playSong(this.getAttribute('data-song'));
+            });
+            playlist.appendChild(button);
+        });
                                     }
 
         function playSong(song) {
