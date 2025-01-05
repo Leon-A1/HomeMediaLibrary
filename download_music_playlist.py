@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Define the playlist URL and output folder
-playlist_url = "https://music.youtube.com/playlist?list=PLpDHBn_bSGr4nXelgFHWrbCL5rioqJPWT&si=eZxQLgeuNSNjkRjO"
+playlist_url = "https://music.youtube.com/playlist?list=PLpDHBn_bSGr7WnHt4SNf9NkWHmDlfMG6U&si=nwxL-5mcQI7pjHyF"
 output_folder = "Music"
 
 # Create the output folder if it doesn't exist
