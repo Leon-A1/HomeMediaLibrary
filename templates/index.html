@@ -173,10 +173,20 @@
 
         }
     }
-    display_elements(songList);
+                            display_elements(songList);
+                                                        let currentFolder = '';
 
+                        const get_downloads_folder = async () => {
+                            let currentFolder = 'Downloads';
 
-                                    let currentFolder = '';
+                                                const response = await fetch(`/folder/${currentFolder}`);
+                                                const files = await response.json();
+                                                // Store full paths in songList
+                                                songList = files.map(file => currentFolder ? `${currentFolder}/${file}` : file);
+                                                display_elements(songList);
+                                                updatePlaylist(files);
+                                            }
+                                            get_downloads_folder();
 
                                     // Update playlist when folder changes
                                     folderSelector.addEventListener('change', async function () {
@@ -249,6 +259,7 @@
             audioSource.src = `/music/${song}`;
             audioPlayer.load();
             audioPlayer.play();
+
             updateMediaInfo(song);
         currentSongIndex = songList.indexOf(song);
     }
@@ -272,6 +283,14 @@
                 shuffleMode = true;
             playNextSong()
             shuffleButton.classList.toggle('shuffle-mode');
+
+
+
+                playButtons.forEach(button => {
+                    button.addEventListener('click', function () {
+                        playSong(this.getAttribute('data-song'));
+                    });
+                });
         });
     </script>
 </body>

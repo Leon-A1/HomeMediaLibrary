@@ -9,17 +9,20 @@ MUSIC_DIR = "C:/Users/leona/Desktop/Code 2025/YouTubeMusicDownloader/Music"
 @app.route('/')
 def index():
     # Get folders and their file counts
-    folders = ['']  # Empty string represents root Music folder
+    # Use Downloads folder as root folder
+    folders = ['Downloads']  # Empty string represents root Music folder
     folder_counts = {}
-    
+    downloads_folder_path = MUSIC_DIR + '/Downloads'
     # Count files in root folder
-    root_files = [f for f in os.listdir(MUSIC_DIR) 
-                  if os.path.isfile(os.path.join(MUSIC_DIR, f)) 
+    root_files = [f for f in os.listdir(downloads_folder_path) 
+                  if os.path.isfile(os.path.join(downloads_folder_path, f)) 
                   and f.lower().endswith(('.mp3', '.wav', '.flac', '.aac'))]
-    folder_counts[''] = len(root_files)
-    
+    folder_counts['Downloads'] = len(root_files)
+    print(folder_counts['Downloads'])
     # Count files in subfolders
     for item in os.listdir(MUSIC_DIR):
+        if(item == "Downloads"):
+            continue
         if os.path.isdir(os.path.join(MUSIC_DIR, item)):
             folders.append(item)
             folder_path = os.path.join(MUSIC_DIR, item)
