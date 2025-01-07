@@ -21,6 +21,7 @@ command = [
     "--output", f"{output_folder}/%(artist)s - %(title)s (%(upload_date>%Y)s).%(ext)s",
     "--metadata-from-title", "(?P<artist>.+?) - (?P<title>.+)",  # Extract artist/title from video title
     "--yes-playlist",
+    "--format", 'best',
     playlist_url
 ]
 

@@ -82,7 +82,21 @@
         line-height: 1.4;
         }
         #playlist button:hover {
-            background-color: #f81f4b;
+            background-color: #db29b4;
+        }
+        #playlist button.playing {
+            background-color: #db29b4;
+            position: relative;
+            padding-left: 40px;
+        }
+        
+        #playlist button.playing::before {
+            content: "▶";
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
         }
         #controls {
             margin-top: 0px;
@@ -281,7 +295,7 @@
             get_downloads_folder();
 
 
-        function updatePlaylist(files) {
+            function updatePlaylist(files) {
             const playlist = document.getElementById('playlist');
             playlist.innerHTML = '';
             files.forEach(file => {
@@ -289,22 +303,28 @@
                 button.className = 'play-button';
                 const songPath = currentFolder ? `${currentFolder}/${file}` : file;
                 button.setAttribute('data-song', songPath);
-
-            const metadata = parseSongMetadata(file);
-            let displayText = metadata.title;
-            if (metadata.artist) {
-                displayText = `${metadata.artist} - ${metadata.title}`;
-            }
-            if (metadata.year) {
-                displayText += ` (${metadata.year})`;
-            }
-
-            button.textContent = displayText;
-            button.addEventListener('click', function () {
-                playSong(this.getAttribute('data-song'));
+                
+                const metadata = parseSongMetadata(file);
+                let displayText = metadata.title;
+                if (metadata.artist) {
+                    displayText = `${metadata.artist} - ${metadata.title}`;
+                }
+                if (metadata.year) {
+                    displayText += ` (${metadata.year})`;
+                }
+                
+                button.textContent = displayText;
+                
+                // Add highlighting if this is the current song
+                if (songPath === songList[currentSongIndex]) {
+                    button.classList.add('playing');
+                }
+                
+                button.addEventListener('click', function() {
+                    playSong(this.getAttribute('data-song'));
+                });
+                playlist.appendChild(button);
             });
-            playlist.appendChild(button);
-        });
         }
 
 
@@ -337,14 +357,25 @@
             });
         }
     }
-        function playSong(song) {
+    function playSong(song) {
+            // Remove highlighting from all buttons
+            document.querySelectorAll('.play-button').forEach(btn => {
+                btn.classList.remove('playing');
+            });
+            
+            // Add highlighting to the current song button
+            const currentButton = document.querySelector(`[data-song="${song}"]`);
+            if (currentButton) {
+                currentButton.classList.add('playing');
+            }
+            
             audioSource.src = `/music/${song}`;
             audioPlayer.load();
             audioPlayer.play();
-
+            
             updateMediaInfo(song);
-        currentSongIndex = songList.indexOf(song);
-    }
+            currentSongIndex = songList.indexOf(song);
+        }
 
 
             function playNextSong() {
