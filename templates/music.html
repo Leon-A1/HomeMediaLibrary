@@ -382,20 +382,47 @@
                 if (songList.length === 0) return;
 
                 if (shuffleMode) {
-                    if (playedSongs.size === songList.length) {
-                        // Reset played songs if all have been played
-                        playedSongs.clear();
+                    let attempts = 0;
+                    const maxAttempts = songList.length * 2; // Prevent infinite loop
+                    
+                    function tryNextSong() {
+                        if (attempts >= maxAttempts) {
+                            console.log("Could not find an unplayed song");
+                            return;
+                        }
+                        
+                        const nextSong = songList[Math.floor(Math.random() * songList.length)];
+                        const folder = folderSelector.value || 'Downloads';
+                        
+                        fetch('/add_shuffled_song', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                folder: folder,
+                                song: nextSong
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.should_skip) {
+                                // Song was already played, try another one
+                                attempts++;
+                                tryNextSong();
+                            } else {
+                                // Song is good to play
+                                currentSongIndex = songList.indexOf(nextSong);
+                                playSong(nextSong);
+                            }
+                        });
                     }
-                    let nextSong;
-                    do {
-                        nextSong = songList[Math.floor(Math.random() * songList.length)];
-                    } while (playedSongs.has(nextSong));
-                    playedSongs.add(nextSong);
-                    currentSongIndex = songList.indexOf(nextSong);
+                    
+                    tryNextSong();
                 } else {
                     currentSongIndex = (currentSongIndex + 1) % songList.length;
+                    playSong(songList[currentSongIndex]);
                 }
-                playSong(songList[currentSongIndex]);
             }
 
 

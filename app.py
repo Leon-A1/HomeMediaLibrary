@@ -31,6 +31,9 @@ FINISHED_BOOKS_FILE = current_directory+"/finished_books.json"
 LOCKED_DIR = current_directory+"/Locked"
 PASSWORD = "123"  # In a real application, use a secure hashed password
 
+# Add after other directory definitions
+SHUFFLED_DIR = current_directory + "/shuffled"
+
 def load_finished_books():
     if os.path.exists(FINISHED_BOOKS_FILE):
         with open(FINISHED_BOOKS_FILE, 'r') as f:
@@ -62,6 +65,19 @@ def extract_cover(epub_path):
 
 def check_auth():
     return session.get('authenticated', False)
+
+def load_shuffle_history(folder_name):
+    json_path = os.path.join(SHUFFLED_DIR, f"{folder_name}.json")
+    if os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            return json.load(f)
+    return []
+
+def save_shuffle_history(folder_name, played_songs):
+    os.makedirs(SHUFFLED_DIR, exist_ok=True)
+    json_path = os.path.join(SHUFFLED_DIR, f"{folder_name}.json")
+    with open(json_path, 'w') as f:
+        json.dump(played_songs, f, indent=4)
 
 @app.route('/')
 def index():
@@ -221,6 +237,50 @@ def serve_locked_media(filename):
         abort(403)
     return send_from_directory(LOCKED_DIR, filename)
 
+@app.route('/add_shuffled_song', methods=['POST'])
+def add_shuffled_song():
+    data = request.json
+    folder_name = data.get('folder', 'Downloads')
+    song = data.get('song')
+    
+    if not song:
+        return jsonify({'success': False, 'message': 'No song provided'})
+
+    # Get the folder path and count total songs
+    folder_path = os.path.join(MUSIC_DIR, folder_name)
+    total_songs = len([f for f in os.listdir(folder_path) 
+                      if os.path.isfile(os.path.join(folder_path, f)) 
+                      and f.lower().endswith(('.mp3', '.wav', '.flac', '.aac'))])
+
+    # Load existing history
+    played_songs = load_shuffle_history(folder_name)
+    
+    # Check if song is already in list
+    if song in played_songs:
+        return jsonify({
+            'success': False,
+            'message': 'Song already played',
+            'played_songs': played_songs,
+            'should_skip': True
+        })
+
+    # Add new song to list
+    played_songs.append(song)
+    
+    # Reset if we've played all songs
+    if len(played_songs) >= total_songs:
+        played_songs = [song]
+    
+    # Save updated history
+    save_shuffle_history(folder_name, played_songs)
+    
+    return jsonify({
+        'success': True, 
+        'played_songs': played_songs,
+        'should_skip': False,
+        'should_reset': len(played_songs) >= total_songs
+    })
+
 # Add a secret key for session management
 app.secret_key = 'your-secret-key-here'  # Change this to a secure random key in production
 
@@ -230,5 +290,6 @@ if __name__ == '__main__':
     os.makedirs(MUSIC_DIR, exist_ok=True)
     os.makedirs(LOCKED_DIR, exist_ok=True)
     os.makedirs(MEDIA_DIR, exist_ok=True)
+    os.makedirs(SHUFFLED_DIR, exist_ok=True)
     # Set the host to 0.0.0.0 to make the server accessible from other devices on the network
     app.run(host='0.0.0.0', port=5000)
