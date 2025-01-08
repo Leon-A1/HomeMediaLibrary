@@ -55,7 +55,7 @@ def index():
 
     return render_template('index.html')
 
-@app.route('/books')
+@app.route('/books-library')
 def books():
     books = []
     finished_books = load_finished_books()
