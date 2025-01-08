@@ -13,11 +13,14 @@ app = Flask(__name__,template_folder="C:/Users/leona/Desktop/Code 2025/HomeMedia
 
 # Set the directory where your music is stored
 MUSIC_DIR = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Music"
+MEDIA_DIR = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Photos&Videos"
 
 # Configuration
-BOOK_DIR = "Books"  # Directory where your EPUB files are stored
+BOOK_DIR = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Books"  # Directory where your EPUB files are stored
 ALLOWED_EXTENSIONS = {'epub'}
-FINISHED_BOOKS_FILE = "finished_books.json"
+ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
+ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+FINISHED_BOOKS_FILE = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/finished_books.json"
 
 def load_finished_books():
     if os.path.exists(FINISHED_BOOKS_FILE):
@@ -55,7 +58,7 @@ def index():
 
     return render_template('index.html')
 
-@app.route('/books-library')
+@app.route('/books')
 def books():
     books = []
     finished_books = load_finished_books()
@@ -154,6 +157,26 @@ def stream_music(filename):
         folder, file = parts
         return send_from_directory(os.path.join(MUSIC_DIR, folder), file)
     return send_from_directory(MUSIC_DIR, filename)
+
+@app.route('/photos')
+def photos():
+    photos = []
+    for filename in os.listdir(MEDIA_DIR):
+        if filename.lower().endswith(tuple(ALLOWED_PHOTO_EXTENSIONS)):
+            photos.append(filename)
+    return render_template('photos.html', photos=photos)
+
+@app.route('/videos')
+def videos():
+    videos = []
+    for filename in os.listdir(MEDIA_DIR):
+        if filename.lower().endswith(tuple(ALLOWED_VIDEO_EXTENSIONS)):
+            videos.append(filename)
+    return render_template('videos.html', videos=videos)
+
+@app.route('/media/<path:filename>')
+def serve_media(filename):
+    return send_from_directory(MEDIA_DIR, filename)
     
 if __name__ == '__main__':
     os.makedirs(BOOK_DIR, exist_ok=True)
