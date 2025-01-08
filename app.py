@@ -7,21 +7,23 @@ import io
 import base64
 import json
 from datetime import datetime
+import os
 
+current_directory = os.getcwd()
 
-app = Flask(__name__,template_folder="C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/templates")
+app = Flask(__name__,template_folder= current_directory+"/templates")
 
 # Set the directory where your music is stored
-MUSIC_DIR = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Music"
-MEDIA_DIR = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Photos&Videos"
+MUSIC_DIR = current_directory+"/Music"
+MEDIA_DIR = current_directory+"/Photos&Videos"
 
 # Configuration
-BOOK_DIR = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Books"  # Directory where your EPUB files are stored
+BOOK_DIR = current_directory+"/Books"  # Directory where your EPUB files are stored
 ALLOWED_EXTENSIONS = {'epub'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
-FINISHED_BOOKS_FILE = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/finished_books.json"
-LOCKED_DIR = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Locked"
+FINISHED_BOOKS_FILE = current_directory+"/finished_books.json"
+LOCKED_DIR = current_directory+"/Locked"
 PASSWORD = "123"  # In a real application, use a secure hashed password
 
 def load_finished_books():
@@ -220,5 +222,7 @@ app.secret_key = 'your-secret-key-here'  # Change this to a secure random key in
 if __name__ == '__main__':
     os.makedirs(BOOK_DIR, exist_ok=True)
     os.makedirs(MUSIC_DIR, exist_ok=True)
+    os.makedirs(LOCKED_DIR, exist_ok=True)
+    os.makedirs(MEDIA_DIR, exist_ok=True)
     # Set the host to 0.0.0.0 to make the server accessible from other devices on the network
     app.run(host='0.0.0.0', port=5000)
