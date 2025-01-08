@@ -99,19 +99,12 @@
     </style>
 </head>
 <body>
-    <div class="video-grid">
-        {% for video in videos %}
-        <div class="video-card" onclick="openModal('{{ url_for('serve_media', filename=video) }}')">
-            <div class="video-container">
-                <video preload="metadata">
-                    <source src="{{ url_for('serve_media', filename=video) }}" type="video/mp4">
-                </video>
-            </div>
-            <div class="video-info">
-                <h3 class="video-title">{{ video }}</h3>
-            </div>
-        </div>
-        {% endfor %}
+    <div class="video-grid" id="videoGrid">
+        <!-- Items will be loaded dynamically -->
+    </div>
+
+    <div class="loading" id="loading" style="display: none; text-align: center; padding: 20px;">
+        Loading...
     </div>
 
     <div class="modal" id="videoModal">
@@ -124,6 +117,63 @@
     </div>
 
     <script>
+        let currentPage = 1;
+        let loading = false;
+        let hasMore = true;
+
+        loadItems();
+
+        window.addEventListener('scroll', () => {
+            if (loading || !hasMore) return;
+            
+            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+            if (scrollTop + clientHeight >= scrollHeight - 500) {
+                loadItems();
+            }
+        });
+
+        function loadItems() {
+            if (loading || !hasMore) return;
+            
+            loading = true;
+            document.getElementById('loading').style.display = 'block';
+
+            fetch(`/api/videos?page=${currentPage}`)
+                .then(response => response.json())
+                .then(data => {
+                    const grid = document.getElementById('videoGrid');
+                    
+                    data.items.forEach(video => {
+                        const card = document.createElement('div');
+                        card.className = 'video-card';
+                        card.onclick = () => openModal(`/media/${video}`);
+                        
+                        card.innerHTML = `
+                            <div class="video-container">
+                                <video preload="metadata">
+                                    <source src="/media/${video}" type="video/mp4">
+                                </video>
+                            </div>
+                            <div class="video-info">
+                                <h3 class="video-title">${video}</h3>
+                            </div>
+                        `;
+                        
+                        grid.appendChild(card);
+                    });
+
+                    hasMore = data.hasMore;
+                    currentPage++;
+                    loading = false;
+                    document.getElementById('loading').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error loading items:', error);
+                    loading = false;
+                    document.getElementById('loading').style.display = 'none';
+                });
+        }
+
         function openModal(videoSrc) {
             const modal = document.getElementById('videoModal');
             const video = document.getElementById('modalVideo');

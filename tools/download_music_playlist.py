@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Define the playlist URL and output folder
-playlist_url = "https://www.youtube.com/watch?v=oPo86ureETg"
+playlist_url = "https://music.youtube.com/playlist?list=PLpDHBn_bSGr5lUOP2NXP-IDx_xV8F_87g&si=EK9eXTXao9ItvmvL"
 output_folder = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Music"+"/Downloads"
 
 # Create the output folder if it doesn't exist
@@ -21,7 +21,6 @@ command = [
     "--output", f"{output_folder}/%(artist)s - %(title)s (%(upload_date>%Y)s).%(ext)s",
     "--metadata-from-title", "(?P<artist>.+?) - (?P<title>.+)",  # Extract artist/title from video title
     "--yes-playlist",
-    "--format", 'best',
     playlist_url
 ]
 

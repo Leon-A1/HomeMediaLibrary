@@ -79,6 +79,14 @@ def save_shuffle_history(folder_name, played_songs):
     with open(json_path, 'w') as f:
         json.dump(played_songs, f, indent=4)
 
+def get_paginated_files(directory, allowed_extensions, page, per_page=30):
+    files = [f for f in os.listdir(directory) 
+             if f.lower().endswith(tuple(allowed_extensions))]
+    files.sort()
+    start = (page - 1) * per_page
+    end = start + per_page
+    return files[start:end], len(files)
+
 @app.route('/')
 def index():
 
@@ -186,19 +194,31 @@ def stream_music(filename):
 
 @app.route('/photos')
 def photos():
-    photos = []
-    for filename in os.listdir(MEDIA_DIR):
-        if filename.lower().endswith(tuple(ALLOWED_PHOTO_EXTENSIONS)):
-            photos.append(filename)
-    return render_template('photos.html', photos=photos)
+    return render_template('photos.html')
+
+@app.route('/api/photos')
+def get_photos():
+    page = int(request.args.get('page', 1))
+    photos, total = get_paginated_files(MEDIA_DIR, ALLOWED_PHOTO_EXTENSIONS, page)
+    return jsonify({
+        'items': photos,
+        'hasMore': len(photos) == 30,
+        'total': total
+    })
 
 @app.route('/videos')
 def videos():
-    videos = []
-    for filename in os.listdir(MEDIA_DIR):
-        if filename.lower().endswith(tuple(ALLOWED_VIDEO_EXTENSIONS)):
-            videos.append(filename)
-    return render_template('videos.html', videos=videos)
+    return render_template('videos.html')
+
+@app.route('/api/videos')
+def get_videos():
+    page = int(request.args.get('page', 1))
+    videos, total = get_paginated_files(MEDIA_DIR, ALLOWED_VIDEO_EXTENSIONS, page)
+    return jsonify({
+        'items': videos,
+        'hasMore': len(videos) == 30,
+        'total': total
+    })
 
 @app.route('/media/<path:filename>')
 def serve_media(filename):
@@ -208,16 +228,30 @@ def serve_media(filename):
 def locked():
     if not check_auth():
         return render_template('login.html')
+    return render_template('locked.html')
+
+@app.route('/api/locked')
+def get_locked():
+    if not check_auth():
+        abort(403)
+    page = int(request.args.get('page', 1))
+    media_type = request.args.get('type', 'all')
     
-    photos = []
-    videos = []
-    for filename in os.listdir(LOCKED_DIR):
-        if filename.lower().endswith(tuple(ALLOWED_PHOTO_EXTENSIONS)):
-            photos.append(filename)
-        elif filename.lower().endswith(tuple(ALLOWED_VIDEO_EXTENSIONS)):
-            videos.append(filename)
+    if media_type == 'photos':
+        items, total = get_paginated_files(LOCKED_DIR, ALLOWED_PHOTO_EXTENSIONS, page)
+    elif media_type == 'videos':
+        items, total = get_paginated_files(LOCKED_DIR, ALLOWED_VIDEO_EXTENSIONS, page)
+    else:
+        photos, photos_total = get_paginated_files(LOCKED_DIR, ALLOWED_PHOTO_EXTENSIONS, page)
+        videos, videos_total = get_paginated_files(LOCKED_DIR, ALLOWED_VIDEO_EXTENSIONS, page)
+        items = photos + videos
+        total = photos_total + videos_total
     
-    return render_template('locked.html', photos=photos, videos=videos)
+    return jsonify({
+        'items': items,
+        'hasMore': len(items) == 30,
+        'total': total
+    })
 
 @app.route('/login', methods=['POST'])
 def login():

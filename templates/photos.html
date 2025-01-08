@@ -76,12 +76,12 @@
     </style>
 </head>
 <body>
-    <div class="photo-grid">
-        {% for photo in photos %}
-        <div class="photo-card" onclick="openLightbox('{{ url_for('serve_media', filename=photo) }}')">
-            <img src="{{ url_for('serve_media', filename=photo) }}" alt="{{ photo }}">
-        </div>
-        {% endfor %}
+    <div class="photo-grid" id="photoGrid">
+        <!-- Items will be loaded dynamically -->
+    </div>
+
+    <div class="loading" id="loading" style="display: none; text-align: center; padding: 20px;color:'white">
+        Loading...
     </div>
 
     <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -90,6 +90,59 @@
     </div>
 
     <script>
+        let currentPage = 1;
+        let loading = false;
+        let hasMore = true;
+
+        // Load initial items
+        loadItems();
+
+        // Infinite scroll handler
+        window.addEventListener('scroll', () => {
+            if (loading || !hasMore) return;
+            
+            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+            if (scrollTop + clientHeight >= scrollHeight - 500) {
+                loadItems();
+            }
+        });
+
+        function loadItems() {
+            if (loading || !hasMore) return;
+            
+            loading = true;
+            document.getElementById('loading').style.display = 'block';
+
+            fetch(`/api/photos?page=${currentPage}`)
+                .then(response => response.json())
+                .then(data => {
+                    const grid = document.getElementById('photoGrid');
+                    
+                    data.items.forEach(photo => {
+                        const card = document.createElement('div');
+                        card.className = 'photo-card';
+                        card.onclick = () => openLightbox(`/media/${photo}`);
+                        
+                        const img = document.createElement('img');
+                        img.src = `/media/${photo}`;
+                        img.alt = photo;
+                        
+                        card.appendChild(img);
+                        grid.appendChild(card);
+                    });
+
+                    hasMore = data.hasMore;
+                    currentPage++;
+                    loading = false;
+                    document.getElementById('loading').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error loading items:', error);
+                    loading = false;
+                    document.getElementById('loading').style.display = 'none';
+                });
+        }
+
         function openLightbox(imgSrc) {
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');

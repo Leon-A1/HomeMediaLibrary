@@ -106,21 +106,11 @@
         <h1>Protected Content</h1>
         <a href="/logout" class="logout-btn">Logout</a>
     </div>
-
-    <div class="media-grid">
-        {% for photo in photos %}
-        <div class="media-card" onclick="openModal('{{ url_for('serve_locked_media', filename=photo) }}', 'image')">
-            <img src="{{ url_for('serve_locked_media', filename=photo) }}" alt="{{ photo }}">
-        </div>
-        {% endfor %}
-
-        {% for video in videos %}
-        <div class="media-card" onclick="openModal('{{ url_for('serve_locked_media', filename=video) }}', 'video')">
-            <video>
-                <source src="{{ url_for('serve_locked_media', filename=video) }}" type="video/mp4">
-            </video>
-        </div>
-        {% endfor %}
+    <div class="loading" id="loading" style="display: none; text-align: center; padding: 20px; color: white;">
+        Loading...
+    </div>
+    <div class="media-grid" id="mediaGrid">
+        <!-- Items will be loaded dynamically -->
     </div>
 
     <div class="modal" id="mediaModal">
@@ -130,6 +120,66 @@
     </div>
 
     <script>
+        let currentPage = 1;
+        let loading = false;
+        let hasMore = true;
+
+        loadItems();
+
+        window.addEventListener('scroll', () => {
+            if (loading || !hasMore) return;
+            
+            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+            if (scrollTop + clientHeight >= scrollHeight - 500) {
+                loadItems();
+            }
+        });
+
+        function loadItems() {
+            if (loading || !hasMore) return;
+            
+            loading = true;
+            document.getElementById('loading').style.display = 'block';
+
+            fetch(`/api/locked?page=${currentPage}`)
+                .then(response => response.json())
+                .then(data => {
+                    const grid = document.getElementById('mediaGrid');
+                    
+                    data.items.forEach(item => {
+                        const isVideo = item.toLowerCase().endsWith(('.mp4', '.avi', '.mov', '.mkv'));
+                        const card = document.createElement('div');
+                        card.className = 'media-card';
+                        
+                        if (isVideo) {
+                            card.onclick = () => openModal(`/locked-media/${item}`, 'video');
+                            card.innerHTML = `
+                                <video>
+                                    <source src="/locked-media/${item}" type="video/mp4">
+                                </video>
+                            `;
+                        } else {
+                            card.onclick = () => openModal(`/locked-media/${item}`, 'image');
+                            card.innerHTML = `
+                                <img src="/locked-media/${item}" alt="${item}">
+                            `;
+                        }
+                        
+                        grid.appendChild(card);
+                    });
+
+                    hasMore = data.hasMore;
+                    currentPage++;
+                    loading = false;
+                    document.getElementById('loading').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error loading items:', error);
+                    loading = false;
+                    document.getElementById('loading').style.display = 'none';
+                });
+        }
+
         function openModal(src, type) {
             const modal = document.getElementById('mediaModal');
             const content = document.getElementById('modalContent');
