@@ -29,7 +29,7 @@ ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 FINISHED_BOOKS_FILE = current_directory+"/finished_books.json"
 LOCKED_DIR = current_directory+"/Locked"
-PASSWORD = ""  # In a real application, use a secure hashed password
+PASSWORD = ""  # Locked will be hidden until a password is set
 
 # Add after other directory definitions
 SHUFFLED_DIR = current_directory + "/shuffled"
@@ -188,7 +188,8 @@ def index():
                          has_books=has_books(),
                          has_music=has_music(),
                          has_photos=has_photos(),
-                         has_videos=has_videos())
+                         has_videos=has_videos(),
+                         has_protected=has_protected_content())
 
 @app.route('/books')
 def books():
