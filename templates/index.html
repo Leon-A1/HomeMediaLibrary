@@ -42,11 +42,21 @@
 </head>
 <body>
     <div class="nav-buttons">
+        {% if has_music %}
         <a href="/music">Music</a>
+        {% endif %}
+        {% if has_books %}
         <a href="/books">Books</a>
+        {% endif %}
+        {% if has_photos %}
         <a href="/photos">Photos</a>
+        {% endif %}
+        {% if has_videos %}
         <a href="/videos">Videos</a>
+        {% endif %}
+        {% if has_protected %}
         <a href="/locked">Protected Content</a>
+        {% endif %}
     </div>
 </body>
 </html>

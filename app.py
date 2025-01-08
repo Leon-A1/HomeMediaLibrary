@@ -29,7 +29,7 @@ ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 FINISHED_BOOKS_FILE = current_directory+"/finished_books.json"
 LOCKED_DIR = current_directory+"/Locked"
-PASSWORD = "123"  # In a real application, use a secure hashed password
+PASSWORD = ""  # In a real application, use a secure hashed password
 
 # Add after other directory definitions
 SHUFFLED_DIR = current_directory + "/shuffled"
@@ -145,10 +145,50 @@ def scan_photo_contents(directory, path=''):
 
     return folders, items
 
+def has_protected_content():
+    return bool(PASSWORD.strip()) 
+
+def has_books():
+    return any(f.endswith('.epub') for f in os.listdir(BOOK_DIR))
+
+def has_music():
+    # Check root music directory and Downloads folder
+    downloads_path = os.path.join(MUSIC_DIR, 'Downloads')
+    has_downloads = os.path.exists(downloads_path) and any(
+        f.lower().endswith(('.mp3', '.wav', '.flac', '.aac')) 
+        for f in os.listdir(downloads_path)
+    )
+    
+    # Check other folders
+    has_other_music = any(
+        f.lower().endswith(('.mp3', '.wav', '.flac', '.aac')) 
+        for root, _, files in os.walk(MUSIC_DIR) 
+        for f in files
+    )
+    
+    return has_downloads or has_other_music
+
+def has_photos():
+    return any(
+        f.lower().endswith(tuple(ALLOWED_PHOTO_EXTENSIONS)) 
+        for root, _, files in os.walk(MEDIA_DIR) 
+        for f in files
+    )
+
+def has_videos():
+    return any(
+        f.lower().endswith(tuple(ALLOWED_VIDEO_EXTENSIONS)) 
+        for root, _, files in os.walk(MEDIA_DIR) 
+        for f in files
+    )
+
 @app.route('/')
 def index():
-
-    return render_template('index.html')
+    return render_template('index.html',
+                         has_books=has_books(),
+                         has_music=has_music(),
+                         has_photos=has_photos(),
+                         has_videos=has_videos())
 
 @app.route('/books')
 def books():
