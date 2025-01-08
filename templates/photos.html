@@ -144,12 +144,14 @@
         // Load initial items
         loadItems();
 
-        // Infinite scroll handler
+        // Improved scroll handler
         window.addEventListener('scroll', () => {
             if (loading || !hasMore) return;
             
-            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-            if (scrollTop + clientHeight >= scrollHeight - 500) {
+            const scrollPosition = window.innerHeight + window.scrollY;
+            const scrollThreshold = document.documentElement.scrollHeight - 500; // Trigger earlier
+            
+            if (scrollPosition >= scrollThreshold) {
                 loadItems();
             }
         });
@@ -198,9 +200,17 @@
                     });
 
                     hasMore = data.hasMore;
-                    currentPage++;
+                    if (hasMore) {
+                        currentPage++;
+                    }
                     loading = false;
                     document.getElementById('loading').style.display = 'none';
+
+                    // Check if we need to load more items immediately
+                    // (in case the page is not full)
+                    if (hasMore && document.documentElement.scrollHeight <= window.innerHeight) {
+                        loadItems();
+                    }
                 })
                 .catch(error => {
                     console.error('Error loading items:', error);

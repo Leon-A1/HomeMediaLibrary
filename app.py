@@ -79,7 +79,7 @@ def save_shuffle_history(folder_name, played_songs):
     with open(json_path, 'w') as f:
         json.dump(played_songs, f, indent=4)
 
-def get_paginated_files(directory, allowed_extensions, page, per_page=10):
+def get_paginated_files(directory, allowed_extensions, page, per_page=5):
     files = [f for f in os.listdir(directory) 
              if f.lower().endswith(tuple(allowed_extensions))]
     files.sort()
@@ -258,7 +258,7 @@ def photos():
 def get_photos():
     page = int(request.args.get('page', 1))
     path = request.args.get('path', '')
-    per_page = 10
+    per_page = 5
 
     # Get folders and files using the photo-specific function
     folders, photos = scan_photo_contents(MEDIA_DIR, path)
@@ -272,10 +272,13 @@ def get_photos():
     end_idx = start_idx + per_page
     paginated_photos = photos[start_idx:end_idx]
 
+    # Fix hasMore calculation
+    has_more = end_idx < len(photos)
+
     return jsonify({
         'folders': folders if page == 1 else [],  # Only send folders on first page
         'items': paginated_photos,
-        'hasMore': end_idx < len(photos),
+        'hasMore': has_more,
         'total': len(photos)
     })
 
@@ -287,7 +290,7 @@ def videos():
 def get_videos():
     page = int(request.args.get('page', 1))
     path = request.args.get('path', '')
-    per_page = 10
+    per_page = 5
 
     # Get folders and files using the video-specific function
     folders, videos = scan_video_contents(MEDIA_DIR, path)
@@ -301,10 +304,13 @@ def get_videos():
     end_idx = start_idx + per_page
     paginated_videos = videos[start_idx:end_idx]
 
+    # Fix hasMore calculation
+    has_more = end_idx < len(videos)
+
     return jsonify({
         'folders': folders if page == 1 else [],  # Only send folders on first page
         'items': paginated_videos,
-        'hasMore': end_idx < len(videos),
+        'hasMore': has_more,
         'total': len(videos)
     })
 
@@ -326,21 +332,25 @@ def get_locked():
     if not check_auth():
         abort(403)
     page = int(request.args.get('page', 1))
+    per_page = 5
     media_type = request.args.get('type', 'all')
     
     if media_type == 'photos':
-        items, total = get_paginated_files(LOCKED_DIR, ALLOWED_PHOTO_EXTENSIONS, page)
+        items, total = get_paginated_files(LOCKED_DIR, ALLOWED_PHOTO_EXTENSIONS, page, per_page)
     elif media_type == 'videos':
-        items, total = get_paginated_files(LOCKED_DIR, ALLOWED_VIDEO_EXTENSIONS, page)
+        items, total = get_paginated_files(LOCKED_DIR, ALLOWED_VIDEO_EXTENSIONS, page, per_page)
     else:
-        photos, photos_total = get_paginated_files(LOCKED_DIR, ALLOWED_PHOTO_EXTENSIONS, page)
-        videos, videos_total = get_paginated_files(LOCKED_DIR, ALLOWED_VIDEO_EXTENSIONS, page)
+        photos, photos_total = get_paginated_files(LOCKED_DIR, ALLOWED_PHOTO_EXTENSIONS, page, per_page)
+        videos, videos_total = get_paginated_files(LOCKED_DIR, ALLOWED_VIDEO_EXTENSIONS, page, per_page)
         items = photos + videos
         total = photos_total + videos_total
     
+    start_idx = (page - 1) * per_page
+    has_more = (start_idx + len(items)) < total
+    
     return jsonify({
         'items': items,
-        'hasMore': len(items) == 10,
+        'hasMore': has_more,
         'total': total
     })
 
