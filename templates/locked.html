@@ -50,6 +50,9 @@
             border-radius: 10px;
             cursor: pointer;
             transition: transform 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .media-card:hover {
@@ -108,6 +111,16 @@
             /* Mute by default */
             muted: true;
         }
+
+        .play-button {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -165,23 +178,28 @@
                         if (isVideo) {
                             card.onclick = () => openModal(`/locked-media/${item}`, 'video');
                             card.innerHTML = `
-                                <video muted autoplay playsinline>
+                                <svg class="play-button" viewBox="0 0 24 24" fill="white">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                                <video muted playsinline>
                                     <source src="/locked-media/${item}" type="video/mp4">
                                 </video>
                             `;
 
                             const videoElement = card.querySelector('video');
+                            const playButton = card.querySelector('.play-button');
+
+                            // Initially hide play button
+                            playButton.style.opacity = '0';
                             
-                            // Set up continuous 3-second loop
+                            // Play first 5 seconds when loaded
                             videoElement.addEventListener('loadedmetadata', () => {
                                 videoElement.play();
-                                
-                                // Set up loop interval
-                                setInterval(() => {
-                                    if (videoElement.currentTime >= 3) {
-                                        videoElement.currentTime = 0;
-                                    }
-                                }, 100); // Check every 100ms
+                                setTimeout(() => {
+                                    videoElement.pause();
+                                    // Fade in play button after video pauses
+                                    playButton.style.opacity = '1';
+                                }, 5000); // Stop after 5 seconds
                             });
                         } else {
                             card.onclick = () => openModal(`/locked-media/${item}`, 'image');
