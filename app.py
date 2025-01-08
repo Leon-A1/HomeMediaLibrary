@@ -79,7 +79,7 @@ def save_shuffle_history(folder_name, played_songs):
     with open(json_path, 'w') as f:
         json.dump(played_songs, f, indent=4)
 
-def get_paginated_files(directory, allowed_extensions, page, per_page=30):
+def get_paginated_files(directory, allowed_extensions, page, per_page=10):
     files = [f for f in os.listdir(directory) 
              if f.lower().endswith(tuple(allowed_extensions))]
     files.sort()
@@ -258,7 +258,7 @@ def photos():
 def get_photos():
     page = int(request.args.get('page', 1))
     path = request.args.get('path', '')
-    per_page = 30
+    per_page = 10
 
     # Get folders and files using the photo-specific function
     folders, photos = scan_photo_contents(MEDIA_DIR, path)
@@ -287,7 +287,7 @@ def videos():
 def get_videos():
     page = int(request.args.get('page', 1))
     path = request.args.get('path', '')
-    per_page = 30
+    per_page = 10
 
     # Get folders and files using the video-specific function
     folders, videos = scan_video_contents(MEDIA_DIR, path)
@@ -340,7 +340,7 @@ def get_locked():
     
     return jsonify({
         'items': items,
-        'hasMore': len(items) == 30,
+        'hasMore': len(items) == 10,
         'total': total
     })
 
