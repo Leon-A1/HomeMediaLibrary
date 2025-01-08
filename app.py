@@ -87,6 +87,64 @@ def get_paginated_files(directory, allowed_extensions, page, per_page=30):
     end = start + per_page
     return files[start:end], len(files)
 
+
+def scan_video_contents(directory, path=''):
+    """Get folders and files from the specified directory and path (for videos)"""
+    full_path = os.path.join(directory, path)
+    items = []
+    folders = []
+
+    try:
+        # First scan for all items
+        for item in os.listdir(full_path):
+            item_path = os.path.join(full_path, item)
+            relative_path = os.path.join(path, item).replace('\\', '/')
+            
+            if os.path.isdir(item_path):
+                # Check if the folder contains any videos (including in subfolders)
+                has_videos = False
+                for root, _, files in os.walk(item_path):
+                    if any(f.lower().endswith(tuple(ALLOWED_VIDEO_EXTENSIONS)) for f in files):
+                        has_videos = True
+                        break
+                
+                if has_videos:
+                    folders.append({
+                        'name': item,
+                        'path': relative_path + '/'
+                    })
+            elif item.lower().endswith(tuple(ALLOWED_VIDEO_EXTENSIONS)):
+                items.append(item)
+    except Exception as e:
+        print(f"Error reading directory: {e}")
+        return [], []
+
+    return folders, items
+
+def scan_photo_contents(directory, path=''):
+    """Get folders and files from the specified directory and path (for photos)"""
+    full_path = os.path.join(directory, path)
+    items = []
+    folders = []
+
+    try:
+        for item in os.listdir(full_path):
+            item_path = os.path.join(full_path, item)
+            relative_path = os.path.join(path, item).replace('\\', '/')
+            
+            if os.path.isdir(item_path):
+                folders.append({
+                    'name': item,
+                    'path': relative_path + '/'
+                })
+            elif item.lower().endswith(tuple(ALLOWED_PHOTO_EXTENSIONS)):
+                items.append(item)
+    except Exception as e:
+        print(f"Error reading directory: {e}")
+        return [], []
+
+    return folders, items
+
 @app.route('/')
 def index():
 
@@ -199,11 +257,26 @@ def photos():
 @app.route('/api/photos')
 def get_photos():
     page = int(request.args.get('page', 1))
-    photos, total = get_paginated_files(MEDIA_DIR, ALLOWED_PHOTO_EXTENSIONS, page)
+    path = request.args.get('path', '')
+    per_page = 30
+
+    # Get folders and files using the photo-specific function
+    folders, photos = scan_photo_contents(MEDIA_DIR, path)
+    
+    # Sort folders and photos
+    folders.sort(key=lambda x: x['name'].lower())
+    photos.sort()
+
+    # Paginate photos
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    paginated_photos = photos[start_idx:end_idx]
+
     return jsonify({
-        'items': photos,
-        'hasMore': len(photos) == 30,
-        'total': total
+        'folders': folders if page == 1 else [],  # Only send folders on first page
+        'items': paginated_photos,
+        'hasMore': end_idx < len(photos),
+        'total': len(photos)
     })
 
 @app.route('/videos')
@@ -213,16 +286,34 @@ def videos():
 @app.route('/api/videos')
 def get_videos():
     page = int(request.args.get('page', 1))
-    videos, total = get_paginated_files(MEDIA_DIR, ALLOWED_VIDEO_EXTENSIONS, page)
+    path = request.args.get('path', '')
+    per_page = 30
+
+    # Get folders and files using the video-specific function
+    folders, videos = scan_video_contents(MEDIA_DIR, path)
+    
+    # Sort folders and videos
+    folders.sort(key=lambda x: x['name'].lower())
+    videos.sort()
+
+    # Paginate videos
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    paginated_videos = videos[start_idx:end_idx]
+
     return jsonify({
-        'items': videos,
-        'hasMore': len(videos) == 30,
-        'total': total
+        'folders': folders if page == 1 else [],  # Only send folders on first page
+        'items': paginated_videos,
+        'hasMore': end_idx < len(videos),
+        'total': len(videos)
     })
 
 @app.route('/media/<path:filename>')
 def serve_media(filename):
-    return send_from_directory(MEDIA_DIR, filename)
+    # Split the path into directory parts
+    parts = filename.split('/')
+    directory = os.path.join(MEDIA_DIR, *parts[:-1])
+    return send_from_directory(directory, parts[-1])
 
 @app.route('/locked')
 def locked():

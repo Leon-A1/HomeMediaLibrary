@@ -43,6 +43,48 @@
             transform: scale(1.02);
         }
 
+        .folder-card {
+            position: relative;
+            aspect-ratio: 1;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .folder-card:hover {
+            transform: scale(1.02);
+        }
+
+        .folder-card i {
+            font-size: 48px;
+            color: #ff0033;
+            margin-bottom: 10px;
+        }
+
+        .folder-card .folder-name {
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+            display: none;
+        }
+
         .video-container {
             position: relative;
             width: 100%;
@@ -111,6 +153,10 @@
     </style>
 </head>
 <body>
+    <div class="back-button" id="backButton" onclick="navigateBack()">
+        <i class="fas fa-arrow-left"></i> Back
+    </div>
+
     <div class="video-grid" id="videoGrid">
         <!-- Items will be loaded dynamically -->
     </div>
@@ -132,6 +178,7 @@
         let currentPage = 1;
         let loading = false;
         let hasMore = true;
+        let currentPath = '';
 
         loadItems();
 
@@ -150,15 +197,34 @@
             loading = true;
             document.getElementById('loading').style.display = 'block';
 
-            fetch(`/api/videos?page=${currentPage}`)
+            fetch(`/api/videos?page=${currentPage}&path=${currentPath}`)
                 .then(response => response.json())
                 .then(data => {
                     const grid = document.getElementById('videoGrid');
                     
+                    if (currentPage === 1) {
+                        grid.innerHTML = ''; // Clear existing items when loading new folder
+                    }
+
+                    // Add folders first
+                    data.folders?.forEach(folder => {
+                        const card = document.createElement('div');
+                        card.className = 'folder-card';
+                        card.onclick = () => navigateToFolder(folder);
+                        
+                        card.innerHTML = `
+                            <i class="fas fa-folder"></i>
+                            <div class="folder-name">${folder.name}</div>
+                        `;
+                        
+                        grid.appendChild(card);
+                    });
+
+                    // Add videos
                     data.items.forEach(video => {
                         const card = document.createElement('div');
                         card.className = 'video-card';
-                        card.onclick = () => openModal(`/media/${video}`);
+                        card.onclick = () => openModal(`/media/${currentPath}${video}`);
                         
                         card.innerHTML = `
                             <svg class="play-button" viewBox="0 0 24 24" fill="white">
@@ -166,7 +232,7 @@
                             </svg>
                             <div class="video-container">
                                 <video class="video-preview" preload="metadata" muted playsinline>
-                                    <source src="/media/${video}" type="video/mp4">
+                                    <source src="/media/${currentPath}${video}" type="video/mp4">
                                 </video>
                             </div>
                         `;
@@ -200,6 +266,28 @@
                     loading = false;
                     document.getElementById('loading').style.display = 'none';
                 });
+        }
+
+        function navigateToFolder(folder) {
+            currentPath = folder.path;
+            currentPage = 1;
+            hasMore = true;
+            document.getElementById('backButton').style.display = 'block';
+            loadItems();
+        }
+
+        function navigateBack() {
+            const pathParts = currentPath.split('/').filter(p => p);
+            pathParts.pop();
+            currentPath = pathParts.length ? pathParts.join('/') + '/' : '';
+            currentPage = 1;
+            hasMore = true;
+            
+            if (!currentPath) {
+                document.getElementById('backButton').style.display = 'none';
+            }
+            
+            loadItems();
         }
 
         function openModal(videoSrc) {
