@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, send_from_directory, abort, jsonify, request
+from flask import Flask, render_template, send_from_directory, abort, jsonify, request, session, redirect, url_for
 import ebooklib
 from ebooklib import epub
 from PIL import Image
@@ -21,6 +21,8 @@ ALLOWED_EXTENSIONS = {'epub'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 FINISHED_BOOKS_FILE = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/finished_books.json"
+LOCKED_DIR = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Locked"
+PASSWORD = "123"  # In a real application, use a secure hashed password
 
 def load_finished_books():
     if os.path.exists(FINISHED_BOOKS_FILE):
@@ -51,7 +53,8 @@ def extract_cover(epub_path):
         print(f"Error processing EPUB: {e} - File: {epub_path}")
         return None
 
-
+def check_auth():
+    return session.get('authenticated', False)
 
 @app.route('/')
 def index():
@@ -177,7 +180,43 @@ def videos():
 @app.route('/media/<path:filename>')
 def serve_media(filename):
     return send_from_directory(MEDIA_DIR, filename)
+
+@app.route('/locked')
+def locked():
+    if not check_auth():
+        return render_template('login.html')
     
+    photos = []
+    videos = []
+    for filename in os.listdir(LOCKED_DIR):
+        if filename.lower().endswith(tuple(ALLOWED_PHOTO_EXTENSIONS)):
+            photos.append(filename)
+        elif filename.lower().endswith(tuple(ALLOWED_VIDEO_EXTENSIONS)):
+            videos.append(filename)
+    
+    return render_template('locked.html', photos=photos, videos=videos)
+
+@app.route('/login', methods=['POST'])
+def login():
+    if request.form.get('password') == PASSWORD:
+        session['authenticated'] = True
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'message': 'Invalid password'})
+
+@app.route('/logout')
+def logout():
+    session.pop('authenticated', None)
+    return redirect(url_for('locked'))
+
+@app.route('/locked-media/<path:filename>')
+def serve_locked_media(filename):
+    if not check_auth():
+        abort(403)
+    return send_from_directory(LOCKED_DIR, filename)
+
+# Add a secret key for session management
+app.secret_key = 'your-secret-key-here'  # Change this to a secure random key in production
+
 if __name__ == '__main__':
     os.makedirs(BOOK_DIR, exist_ok=True)
     os.makedirs(MUSIC_DIR, exist_ok=True)

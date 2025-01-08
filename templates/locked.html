@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Protected Content</title>
+    <style>
+        :root {
+            --bg-color: #000;
+            --card-bg: #2d2d2d;
+            --text-color: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: Arial, sans-serif;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .media-card {
+            position: relative;
+            aspect-ratio: 1;
+            overflow: hidden;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .media-card:hover {
+            transform: scale(1.02);
+        }
+
+        .media-card img, .media-card video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90vh;
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: 90vh;
+        }
+
+        .modal-content video {
+            max-width: 100%;
+            max-height: 90vh;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Protected Content</h1>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+
+    <div class="media-grid">
+        {% for photo in photos %}
+        <div class="media-card" onclick="openModal('{{ url_for('serve_locked_media', filename=photo) }}', 'image')">
+            <img src="{{ url_for('serve_locked_media', filename=photo) }}" alt="{{ photo }}">
+        </div>
+        {% endfor %}
+
+        {% for video in videos %}
+        <div class="media-card" onclick="openModal('{{ url_for('serve_locked_media', filename=video) }}', 'video')">
+            <video>
+                <source src="{{ url_for('serve_locked_media', filename=video) }}" type="video/mp4">
+            </video>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="modal" id="mediaModal">
+        <span class="close-button" onclick="closeModal()">&times;</span>
+        <div class="modal-content" id="modalContent">
+        </div>
+    </div>
+
+    <script>
+        function openModal(src, type) {
+            const modal = document.getElementById('mediaModal');
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = type === 'image' 
+                ? `<img src="${src}" alt="Full size image">`
+                : `<video controls autoplay><source src="${src}" type="video/mp4"></video>`;
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('mediaModal');
+            const content = document.getElementById('modalContent');
+            modal.style.display = 'none';
+            content.innerHTML = '';
+        }
+
+        document.getElementById('mediaModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html> 
