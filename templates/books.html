@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>E-Book Library</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #ffffff;
+            --border-color: #404040;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: Arial, sans-serif;
+        }
+
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .book-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .book-cover {
+            width: 150px;
+            height: 200px;
+            margin: 0 auto;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            object-fit: cover;
+            background-color: #3d3d3d;
+        }
+
+        .placeholder-cover {
+            width: 150px;
+            height: 200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #3d3d3d;
+            border-radius: 5px;
+            color: #666;
+        }
+
+        .book-title {
+            margin: 10px 0;
+            font-size: 1.1em;
+            word-wrap: break-word;
+        }
+
+        .download-link {
+            text-decoration: none;
+            color: #007bff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .download-link:hover {
+            background-color: rgba(0,123,255,0.1);
+        }
+
+        .finished-checkbox {
+            display: none;
+        }
+
+        .finished-label {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .finished-icon {
+            color: #ccc;
+            transition: color 0.3s;
+        }
+
+        .finished-checkbox:checked + .finished-label .finished-icon {
+            color: #007bff;
+        }
+
+        .finished-date {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .book-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 15px;
+                padding: 10px;
+            }
+
+            .book-card {
+                padding: 10px;
+            }
+
+            .book-cover, .placeholder-cover {
+                width: 120px;
+                height: 160px;
+            }
+        }
+
+        .search-wrapper {
+            position: sticky;
+            top: 0;
+            background-color: var(--bg-color);
+            padding: 20px 0;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
+            transform: translateY(-1px);
+        }
+
+        .search-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Make search responsive */
+        @media (max-width: 600px) {
+            .search-wrapper {
+                padding: 10px 0;
+            }
+            
+            .search-input {
+                padding: 10px 15px;
+            }
+            
+            .search-button {
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="search-wrapper">
+        <div class="search-container">
+            <input 
+                type="text" 
+                id="search-input"
+                placeholder="Search books..." 
+                class="search-input"
+            >
+            <button type="button" class="search-button">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="book-grid">
+        {% for book in books %}
+        <div class="book-card">
+            {% if book.cover %}
+                <img src="{{ book.cover }}" alt="{{ book.title }}" class="book-cover">
+            {% else %}
+                <div class="placeholder-cover">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        <path d="M12 6l0 8"></path>
+                        <path d="M8 10l4 -4l4 4"></path>
+                    </svg>
+                </div>
+            {% endif %}
+            <h3 class="book-title">{{ book.title }}</h3>
+            <a href="{{ url_for('serve_book', filename=book.filename) }}" class="download-link">
+                <i class="fas fa-download"></i> Download
+            </a>
+            <div>
+                <input type="checkbox" 
+                       class="finished-checkbox" 
+                       id="checkbox-{{ book.title }}"
+                       data-title="{{ book.title }}"
+                       {% if book.finished %}checked{% endif %}>
+                <label class="finished-label" for="checkbox-{{ book.title }}">
+                    <i class="fas fa-check-circle finished-icon"></i>
+                    Finished
+                </label>
+            </div>
+            <div class="finished-date" id="date-{{ book.title }}">
+                {% if book.finished_date %}
+                Finished on: {{ book.finished_date }}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        document.querySelectorAll('.finished-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const bookTitle = this.dataset.title;
+                fetch(`/toggle_finished/${encodeURIComponent(bookTitle)}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const dateDiv = document.getElementById(`date-${bookTitle}`);
+                    if (data.is_finished) {
+                        dateDiv.textContent = `Finished on: ${data.finished_date}`;
+                    } else {
+                        dateDiv.textContent = '';
+                    }
+                });
+            });
+        });
+
+        const searchInput = document.getElementById('search-input');
+        const bookCards = document.querySelectorAll('.book-card');
+
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            
+            bookCards.forEach(card => {
+                const title = card.querySelector('.book-title').textContent.toLowerCase();
+                if (searchTerm === '' || title.includes(searchTerm)) {
+                    card.style.display = '';
+                    card.style.opacity = '1';
+                    card.style.transform = 'scale(1)';
+                } else {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        card.style.display = 'none';
+                    }, 200);
+                }
+            });
+        });
+
+        searchInput.addEventListener('input', function(e) {
+            const searchButton = document.querySelector('.search-button');
+            if (e.target.value) {
+                searchButton.innerHTML = '<i class="fas fa-times"></i>';
+                searchButton.onclick = () => {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input'));
+                    searchButton.innerHTML = '<i class="fas fa-search"></i>';
+                };
+            } else {
+                searchButton.innerHTML = '<i class="fas fa-search"></i>';
+                searchButton.onclick = null;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@ import subprocess
 
 # Define the playlist URL and output folder
 playlist_url = "https://www.youtube.com/watch?v=oPo86ureETg"
-output_folder = "Music/Downloads"
+output_folder = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Music"+"/Downloads"
 
 # Create the output folder if it doesn't exist
 if not os.path.exists(output_folder):

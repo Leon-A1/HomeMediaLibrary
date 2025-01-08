@@ -2,436 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Player</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml"
-        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231ed760'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E">
+    <title>Home Media Library</title>
     <style>
         body {
-            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
-            padding: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Arial, sans-serif;
             margin: 0;
-            background-color: #000;
-            color: #353535;
-            text-align: center;
-        }
-        h1 {
-            margin-bottom:0px;
-            color: #353535;
-        }
-        .repeat-mode {
-            background-color: #1ed760;
-        }
-        #song-name{
-            font-size: 2em;
-            font-weight: bold;
-            display: block;
-        }
-        .song-details {
-        color: white;
-        margin: 0;
-        padding: 25px;
-        padding-bottom: 0px;   
-        max-width: 500px; 
-        margin: 0 auto;
-    }
-    
-    .song-artist {
-        color: #888;
-        font-size: 0.9em;
-        display: block;
-    }
-    
-    .song-year {
-        color: #666;
-        font-size: 0.8em;
-        margin-left: 10px;
-    }
-
-        #playlist {
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 10px;
-            background-color: #353535;
+            justify-content: center;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        a {
+            padding: 0.8rem 1.5rem;
+            background-color: #2c2c2c;
+            color: #ffffff;
+            text-decoration: none;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            margin: 0 auto;
-            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+            border: 1px solid #3d3d3d;
         }
-        .shuffle-mode {
-            background-color: #1ed760;
-        }
-        #playlist button {
-            margin: 8px;
-            padding: 12px 20px;
-            font-size: 16px;
-            background-color: #000;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            width: calc(100% - 2rem);
-            transition: background-color 0.3s;
-            text-align: left;
-        padding: 12px 20px;
-        line-height: 1.4;
-        }
-        #playlist button:hover {
-            background-color: #1ed760;
-        }
-        #playlist button.playing {
-            background-color: #1ed760;
-            position: relative;
-            padding-left: 40px;
-        }
-        
-        #playlist button.playing::before {
-            content: "▶";
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 12px;
-        }
-        #controls {
-            margin-top: 0px;
-            color-scheme: dark;
-        }
-        #controls button {
-            margin: 0 10px;
-            padding: 15px 30px;
-            font-size: 18px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            margin-bottom: 20px;
 
+        a:hover {
+            background-color: #4a9eff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
         }
-        audio {
-            margin-top: 10px;
-            margin-bottom: 0;
-            width: 100%;
-            max-width: 400px;
-            color-scheme: dark;
-        }
-        .toggle-switch {
-        position: relative;
-        display: inline-block;
-        width: 60px;
-        height: 34px;
-        margin: 0 10px;
-    }
-
-    .toggle-switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-
-    .toggle-slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #353535;
-        transition: .4s;
-        border-radius: 34px;
-    }
-
-    .toggle-slider:before {
-        position: absolute;
-        content: "";
-        height: 26px;
-        width: 26px;
-        left: 4px;
-        bottom: 4px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-    }
-
-    input:checked + .toggle-slider {
-        background-color: #1ed760;
-    }
-
-    input:checked + .toggle-slider:before {
-        transform: translateX(26px);
-    }
-
-    .toggle-container {
-        display: inline-flex;
-        align-items: center;
-        margin: 0 10px;
-    }
-
-    .toggle-label {
-        color: white;
-        margin: 0 0px;
-        font-size: 16px;
-        font-weight: 900;
-    }
     </style>
 </head>
 <body>
-    <div class="song-details">
-        <span id="song-name">Music Player</span>
-        <span id="song-artist" class="song-artist"></span>
-        <span id="song-year" class="song-year"></span>
+    <div class="nav-buttons">
+        <a href="/music">Music</a>
+        <a href="/books">Books</a>
     </div>
-    <audio id="audioPlayer" controls>
-        <source id="audioSource" src="" type="audio/mp3">
-        Your browser does not support the audio element.
-    </audio>
-    <div id="folderSelect">
-        <select id="folderSelector" style="margin: 20px; padding: 10px; font-size: 16px;color-scheme: dark;">
-            {% for folder in folders %}
-                <option value="{{ folder }}">
-                    {{ folder if folder else 'Music (Root)' }} ({{ folder_counts[folder] }})
-                </option>
-            {% endfor %}
-        </select>
-    </div>
-    <div id="controls">
-        <div class="toggle-container">
-            <span class="toggle-label">Shuffle</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="shuffleToggle">
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
-        <div class="toggle-container">
-            <span class="toggle-label">1</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="repeatToggle">
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
-        <button id="nextButton">Next Song</button>
-    </div>
-        <div id="playlist">
-            {% for song in music_files %}
-            <button class="play-button" data-song="{{ song }}">{{ song.rsplit('.', 1)[0] }}</button>
-            {% endfor %}
-            </div>
-
-
-
-    <script>
-        const audioPlayer = document.getElementById('audioPlayer');
-        const audioSource = document.getElementById('audioSource');
-        const playButtons = document.querySelectorAll('.play-button');
-
-        const nextButton = document.getElementById('nextButton');
-                const folderSelector = document.getElementById('folderSelector');
-                let songList = {{ music_files| tojson }};
-        let currentSongIndex = 0;
-        let shuffleMode = false;
-        let playedSongs = new Set();
-                let repeatMode = false;
-                                const shuffleToggle = document.getElementById('shuffleToggle');
-                                const repeatToggle = document.getElementById('repeatToggle');
-                                shuffleToggle.addEventListener('change', () => {
-                                    shuffleMode = shuffleToggle.checked;
-                                    if (shuffleMode) {
-                                        playNextSong();
-                                    }
-                                });
-
-    repeatToggle.addEventListener('change', () => {
-        repeatMode = repeatToggle.checked;
-    });
-
-            function parseSongMetadata(filename) {
-                // Expected format: "Artist - Title (Year).mp3"
-                const withoutExt = filename.split('.').slice(0, -1).join('.');
-                const yearMatch = withoutExt.match(/\((\d{4})\)$/);
-                const year = yearMatch ? yearMatch[1] : '';
-                const nameWithoutYear = withoutExt.replace(/\s*\(\d{4}\)$/, '');
-                const [artist, ...titleParts] = nameWithoutYear.split(' - ');
-                const title = titleParts.join(' - ') || artist;
-
-                return {
-                    artist: titleParts.length ? artist : '',
-                    title: title,
-                    year: year
-                };
-            }
-            function display_elements(songList) {
-                if (songList.length == 0) {
-                    playlist_element = document.getElementById('playlist');
-                    controls_element = document.getElementById('controls');
-                    playlist_element.style.display = 'none';
-                    controls_element.style.display = 'none';
-                } else {
-                    playlist_element = document.getElementById('playlist');
-                    controls_element = document.getElementById('controls');
-                    playlist_element.style.display = 'block';
-                    controls_element.style.display = 'block';
-
-            }
-        }
-
-            display_elements(songList);
-            let currentFolder = '';
-
-            const get_downloads_folder = async () => {
-                let currentFolder = 'Downloads';
-
-                const response = await fetch(`/folder/${currentFolder}`);
-                const files = await response.json();
-                // Store full paths in songList
-                songList = files.map(file => currentFolder ? `${currentFolder}/${file}` : file);
-                display_elements(songList);
-                updatePlaylist(files);
-            }
-            get_downloads_folder();
-
-
-            function updatePlaylist(files) {
-            const playlist = document.getElementById('playlist');
-            playlist.innerHTML = '';
-            files.forEach(file => {
-                const button = document.createElement('button');
-                button.className = 'play-button';
-                const songPath = currentFolder ? `${currentFolder}/${file}` : file;
-                button.setAttribute('data-song', songPath);
-                
-                const metadata = parseSongMetadata(file);
-                let displayText = metadata.title;
-                if (metadata.artist) {
-                    displayText = `${metadata.artist} - ${metadata.title}`;
-                }
-                if (metadata.year) {
-                    displayText += ` (${metadata.year})`;
-                }
-                
-                button.textContent = displayText;
-                
-                // Add highlighting if this is the current song
-                if (songPath === songList[currentSongIndex]) {
-                    button.classList.add('playing');
-                }
-                
-                button.addEventListener('click', function() {
-                    playSong(this.getAttribute('data-song'));
-                });
-                playlist.appendChild(button);
-            });
-        }
-
-
-            function updateMediaInfo(song) {
-                const metadata = parseSongMetadata(song.split('/').pop());
-
-            // Update UI
-            document.title = metadata.title;
-            document.getElementById('song-name').textContent = metadata.title;
-            document.getElementById('song-artist').textContent = metadata.artist;
-            document.getElementById('song-year').textContent = metadata.year ? `(${metadata.year})` : '';
-
-            // Update Media Session API
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: metadata.title,
-                artist: metadata.artist,
-                artwork: [
-                    { src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%231ed760"%3E%3Cpath d="M8 5v14l11-7z"/%3E%3C/svg%3E' }
-                ]
-            });
-
-            // Set media session action handlers
-            navigator.mediaSession.setActionHandler('play', () => audioPlayer.play());
-            navigator.mediaSession.setActionHandler('pause', () => audioPlayer.pause());
-            navigator.mediaSession.setActionHandler('nexttrack', playNextSong);
-            navigator.mediaSession.setActionHandler('previoustrack', () => {
-                currentSongIndex = (currentSongIndex - 1 + songList.length) % songList.length;
-                playSong(songList[currentSongIndex]);
-            });
-        }
-    }
-    function playSong(song) {
-            // Remove highlighting from all buttons
-            document.querySelectorAll('.play-button').forEach(btn => {
-                btn.classList.remove('playing');
-            });
-            
-            // Add highlighting to the current song button
-            const currentButton = document.querySelector(`[data-song="${song}"]`);
-            if (currentButton) {
-                currentButton.classList.add('playing');
-            }
-            
-            audioSource.src = `/music/${song}`;
-            audioPlayer.load();
-            audioPlayer.play();
-            
-            updateMediaInfo(song);
-            currentSongIndex = songList.indexOf(song);
-        }
-
-
-            function playNextSong() {
-                if (songList.length === 0) return;
-
-                if (shuffleMode) {
-                    if (playedSongs.size === songList.length) {
-                        // Reset played songs if all have been played
-                        playedSongs.clear();
-                    }
-                    let nextSong;
-                    do {
-                        nextSong = songList[Math.floor(Math.random() * songList.length)];
-                    } while (playedSongs.has(nextSong));
-                    playedSongs.add(nextSong);
-                    currentSongIndex = songList.indexOf(nextSong);
-                } else {
-                    currentSongIndex = (currentSongIndex + 1) % songList.length;
-                }
-                playSong(songList[currentSongIndex]);
-            }
-
-
-                // Update playlist when folder changes
-                folderSelector.addEventListener('change', async function () {
-                    currentFolder = this.value;
-                    const response = await fetch(`/folder/${currentFolder}`);
-                    const files = await response.json();
-                    // Store full paths in songList
-                    songList = files.map(file => currentFolder ? `${currentFolder}/${file}` : file);
-                    display_elements(songList);
-                    updatePlaylist(files);
-                });
-
-                    audioPlayer.addEventListener('ended', () => {
-                        if (!repeatMode) {
-                            playNextSong();
-                        }
-                    });
-            nextButton.addEventListener('click', playNextSong);
-            shuffleButton.addEventListener('click', () => {
-                shuffleMode = !shuffleMode;
-            playNextSong()
-                if (shuffleMode) {
-                    shuffleButton.classList.add('shuffle-mode');
-                } else {
-                    shuffleButton.classList.remove('shuffle-mode');
-                }
-
-            });
-
-                playButtons.forEach(button => {
-                    button.addEventListener('click', function () {
-                        playSong(this.getAttribute('data-song'));
-                    });
-        });
-    </script>
 </body>
 </html>
