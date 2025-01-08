@@ -1,3 +1,4 @@
+### Install Python 3.11 
 
-## Update exe file after updating py files
-pyinstaller --onefile app.py
+
+### pip install -r requirements.txt

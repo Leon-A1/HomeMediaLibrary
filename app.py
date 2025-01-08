@@ -7,9 +7,14 @@ import io
 import base64
 import json
 from datetime import datetime
-import os
 
-current_directory = os.getcwd()
+# current_directory = os.getcwd()
+# current_directory = os.path.dirname(os.path.abspath(__file__))
+
+### Need to replace the backslashes with forward slashes for the path to work in windows
+current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
+
+# current_directory = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary"
 
 app = Flask(__name__,template_folder= current_directory+"/templates")
 
@@ -220,6 +225,7 @@ def serve_locked_media(filename):
 app.secret_key = 'your-secret-key-here'  # Change this to a secure random key in production
 
 if __name__ == '__main__':
+    print("Starting server...")
     os.makedirs(BOOK_DIR, exist_ok=True)
     os.makedirs(MUSIC_DIR, exist_ok=True)
     os.makedirs(LOCKED_DIR, exist_ok=True)
