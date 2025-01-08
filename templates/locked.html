@@ -99,6 +99,15 @@
             font-size: 30px;
             cursor: pointer;
         }
+
+        .media-card video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+            /* Mute by default */
+            muted: true;
+        }
     </style>
 </head>
 <body>
@@ -147,17 +156,33 @@
                     const grid = document.getElementById('mediaGrid');
                     
                     data.items.forEach(item => {
-                        const isVideo = item.toLowerCase().endsWith(('.mp4', '.avi', '.mov', '.mkv'));
+                        const isVideo = ['.mp4', '.avi', '.mov', '.mkv'].some(ext => 
+                            item.toLowerCase().endsWith(ext)
+                        );
                         const card = document.createElement('div');
                         card.className = 'media-card';
                         
                         if (isVideo) {
                             card.onclick = () => openModal(`/locked-media/${item}`, 'video');
                             card.innerHTML = `
-                                <video>
+                                <video muted autoplay playsinline>
                                     <source src="/locked-media/${item}" type="video/mp4">
                                 </video>
                             `;
+
+                            const videoElement = card.querySelector('video');
+                            
+                            // Set up continuous 3-second loop
+                            videoElement.addEventListener('loadedmetadata', () => {
+                                videoElement.play();
+                                
+                                // Set up loop interval
+                                setInterval(() => {
+                                    if (videoElement.currentTime >= 3) {
+                                        videoElement.currentTime = 0;
+                                    }
+                                }, 100); // Check every 100ms
+                            });
                         } else {
                             card.onclick = () => openModal(`/locked-media/${item}`, 'image');
                             card.innerHTML = `
