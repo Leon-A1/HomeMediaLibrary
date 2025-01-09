@@ -10,31 +10,25 @@ from datetime import datetime
 from PIL.ExifTags import TAGS
 import time
 
-# current_directory = os.getcwd()
-# current_directory = os.path.dirname(os.path.abspath(__file__))
 
-### Need to replace the backslashes with forward slashes for the path to work in windows
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
-
-# current_directory = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary"
 
 app = Flask(__name__,template_folder= current_directory+"/templates")
 
-# Set the directory where your music is stored
+
 MUSIC_DIR = current_directory+"/Music"
 MEDIA_DIR = current_directory+"/Photos&Videos"
+BOOK_DIR = current_directory+"/Books"  
+LOCKED_DIR = current_directory+"/Locked"
+SHUFFLED_DIR = current_directory + "/shuffled"
 
 # Configuration
-BOOK_DIR = current_directory+"/Books"  # Directory where your EPUB files are stored
 ALLOWED_EXTENSIONS = {'epub'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 FINISHED_BOOKS_FILE = current_directory+"/finished_books.json"
-LOCKED_DIR = current_directory+"/Locked"
 PASSWORD = ""  # Locked will be hidden until a password is set
 
-# Add after other directory definitions
-SHUFFLED_DIR = current_directory + "/shuffled"
 
 def load_finished_books():
     if os.path.exists(FINISHED_BOOKS_FILE):
@@ -65,8 +59,6 @@ def extract_cover(epub_path):
         print(f"Error processing EPUB: {e} - File: {epub_path}")
         return None
 
-def check_auth():
-    return session.get('authenticated', False)
 
 def load_shuffle_history(folder_name):
     json_path = os.path.join(SHUFFLED_DIR, f"{folder_name}.json")
@@ -182,8 +174,6 @@ def scan_photo_contents(directory, path=''):
     items.sort(key=lambda x: x['date'], reverse=True)
     return folders, items
 
-def has_protected_content():
-    return bool(PASSWORD.strip()) 
 
 def has_books():
     return any(f.endswith('.epub') for f in os.listdir(BOOK_DIR))
@@ -219,6 +209,14 @@ def has_videos():
         for f in files
     )
 
+
+def check_auth():
+    return session.get('authenticated', False)
+    
+def has_protected_content():
+    return bool(PASSWORD.strip()) 
+
+    
 @app.route('/')
 def index():
     return render_template('index.html',
@@ -342,7 +340,7 @@ def get_photos():
     folders, photos = scan_photo_contents(MEDIA_DIR, path)
     
     # Sort folders alphabetically
-    # folders.sort(key=lambda x: x['name'].lower())
+    folders.sort(key=lambda x: x['name'].lower())
     
     # Sort photos by date, newest first
     photos.sort(key=lambda x: x['date'], reverse=True)
@@ -398,7 +396,6 @@ def get_videos():
 
 @app.route('/media/<path:filename>')
 def serve_media(filename):
-    # Split the path into directory parts
     parts = filename.split('/')
     directory = os.path.join(MEDIA_DIR, *parts[:-1])
     return send_from_directory(directory, parts[-1])
@@ -498,7 +495,6 @@ def add_shuffled_song():
         'should_reset': len(played_songs) >= total_songs
     })
 
-# Add a secret key for session management
 app.secret_key = 'your-secret-key-here'  # Change this to a secure random key in production
 
 if __name__ == '__main__':
