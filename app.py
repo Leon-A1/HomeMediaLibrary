@@ -29,7 +29,7 @@ ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 FINISHED_BOOKS_FILE = current_directory+"/finished_books.json"
 LOCKED_DIR = current_directory+"/Locked"
-PASSWORD = "123"  # Locked will be hidden until a password is set
+PASSWORD = ""  # Locked will be hidden until a password is set
 
 # Add after other directory definitions
 SHUFFLED_DIR = current_directory + "/shuffled"
