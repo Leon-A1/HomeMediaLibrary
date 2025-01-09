@@ -29,8 +29,16 @@
             text-decoration: none;
             border-radius: 8px;
             transition: all 0.3s ease;
-            font-size: 2.5rem;
+            font-size: 2rem;
             border: 1px solid #3d3d3d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        a svg {
+            width: 40px;
+            height: 40px;
         }
 
         a:hover {
@@ -38,24 +46,58 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
         }
+
+        a:hover svg {
+            fill: #ffffff;
+        }
     </style>
 </head>
 <body>
     <div class="nav-buttons">
         {% if has_music %}
-        <a href="/music">Music</a>
+        <a href="/music">
+            Music
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+            </svg>
+        </a>
         {% endif %}
         {% if has_books %}
-        <a href="/books">Books</a>
+        <a href="/books">
+            Books
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V4h2v8l2.5-1.5L13 12V4h5v16z"/>
+            </svg>
+        </a>
         {% endif %}
         {% if has_photos %}
-        <a href="/photos">Photos</a>
+        <a href="/photos">
+            Photos
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+                <rect x="8" y="12" width="48" height="40" rx="4" fill="none" stroke="currentColor" stroke-width="4"/>
+                <circle cx="20" cy="24" r="4" fill="currentColor"/>
+                <path d="M6 42L20 32L30 38L44 24L58 42" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+            </svg>
+        </a>
         {% endif %}
         {% if has_videos %}
-        <a href="/videos">Videos</a>
+        <a href="/videos">
+            Videos
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+                <rect x="8" y="12" width="36" height="40" rx="4" fill="none" stroke="currentColor" stroke-width="4"/>
+                <path d="M44 24L56 16V48L44 40" fill="currentColor"/>
+            </svg>
+        </a>
         {% endif %}
         {% if has_protected %}
-        <a href="/locked">Protected Content</a>
+        <a href="/locked">
+            Protected Content
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+                <rect x="16" y="28" width="32" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="4"/>
+                <path d="M20 28V20C20 12 24 8 32 8C40 8 44 12 44 20V28" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="32" cy="40" r="4" fill="currentColor"/>
+            </svg>
+        </a>
         {% endif %}
     </div>
 </body>
