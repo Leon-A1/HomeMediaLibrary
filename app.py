@@ -7,6 +7,8 @@ import io
 import base64
 import json
 from datetime import datetime
+from PIL.ExifTags import TAGS
+import time
 
 # current_directory = os.getcwd()
 # current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -121,6 +123,34 @@ def scan_video_contents(directory, path=''):
 
     return folders, items
 
+def get_photo_date(file_path):
+    """Get the original creation date from image metadata"""
+    try:
+        with Image.open(file_path) as img:
+            exif = img._getexif()
+            if exif:
+                # Convert EXIF tags to a readable dictionary
+                exif_data = {TAGS.get(tag_id, tag_id): value
+                           for tag_id, value in exif.items()}
+                
+                # Look for CreateDate or DateTimeOriginal
+                if 'CreateDate' in exif_data:
+                    date_str = exif_data['CreateDate']
+                    return time.mktime(time.strptime(date_str, "%Y:%m:%d %H:%M:%S"))
+                elif 'DateTimeOriginal' in exif_data:
+                    date_str = exif_data['DateTimeOriginal']
+                    return time.mktime(time.strptime(date_str, "%Y:%m:%d %H:%M:%S"))
+    except:
+        pass
+    
+    # If no EXIF data, try to get file creation time (Windows)
+    try:
+        stats = os.stat(file_path)
+        # On Windows, st_ctime is the creation time
+        return stats.st_ctime
+    except:
+        return time.time()
+
 def scan_photo_contents(directory, path=''):
     """Get folders and files from the specified directory and path (for photos)"""
     full_path = os.path.join(directory, path)
@@ -138,11 +168,18 @@ def scan_photo_contents(directory, path=''):
                     'path': relative_path + '/'
                 })
             elif item.lower().endswith(tuple(ALLOWED_PHOTO_EXTENSIONS)):
-                items.append(item)
+                # Get the media created date
+                date = get_photo_date(item_path)
+                items.append({
+                    'name': item,
+                    'date': date
+                })
     except Exception as e:
         print(f"Error reading directory: {e}")
         return [], []
 
+    # Sort items by date before returning
+    items.sort(key=lambda x: x['date'], reverse=True)
     return folders, items
 
 def has_protected_content():
@@ -304,16 +341,20 @@ def get_photos():
     # Get folders and files using the photo-specific function
     folders, photos = scan_photo_contents(MEDIA_DIR, path)
     
-    # Sort folders and photos
-    folders.sort(key=lambda x: x['name'].lower())
-    photos.sort()
+    # Sort folders alphabetically
+    # folders.sort(key=lambda x: x['name'].lower())
+    
+    # Sort photos by date, newest first
+    photos.sort(key=lambda x: x['date'], reverse=True)
+    
+    # Extract just the filenames for pagination
+    photo_files = [photo['name'] for photo in photos]
 
     # Paginate photos
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
-    paginated_photos = photos[start_idx:end_idx]
+    paginated_photos = photo_files[start_idx:end_idx]
 
-    # Fix hasMore calculation
     has_more = end_idx < len(photos)
 
     return jsonify({
