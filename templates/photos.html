@@ -140,6 +140,8 @@
         let loading = false;
         let hasMore = true;
         let currentPath = '';
+        let currentPhotos = [];
+        let currentPhotoIndex = 0;
 
         // Load initial items
         loadItems();
@@ -157,12 +159,12 @@
         });
 
         function loadItems() {
-            if (loading || !hasMore) return;
+            if (loading || !hasMore) return Promise.resolve();
             
             loading = true;
             document.getElementById('loading').style.display = 'block';
 
-            fetch(`/api/photos?page=${currentPage}&path=${currentPath}`)
+            return fetch(`/api/photos?page=${currentPage}&path=${currentPath}`)
                 .then(response => response.json())
                 .then(data => {
                     const grid = document.getElementById('photoGrid');
@@ -206,10 +208,15 @@
                     loading = false;
                     document.getElementById('loading').style.display = 'none';
 
+                    // Store photos in our array
+                    if (currentPage === 1) {
+                        currentPhotos = [];
+                    }
+                    currentPhotos = currentPhotos.concat(data.items.map(photo => `/media/${currentPath}${photo}`));
+
                     // Check if we need to load more items immediately
-                    // (in case the page is not full)
                     if (hasMore && document.documentElement.scrollHeight <= window.innerHeight) {
-                        loadItems();
+                        return loadItems();
                     }
                 })
                 .catch(error => {
@@ -245,11 +252,56 @@
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');
             lightboxImg.src = imgSrc;
+            currentPhotoIndex = currentPhotos.indexOf(imgSrc);
             lightbox.style.display = 'flex';
+
+            // Add touch event listeners
+            let touchStartY = 0;
+            let touchEndY = 0;
+
+            lightbox.addEventListener('touchstart', function(e) {
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+
+            lightbox.addEventListener('touchmove', function(e) {
+                e.preventDefault(); // Prevent default scrolling
+            }, { passive: false });
+
+            lightbox.addEventListener('touchend', function(e) {
+                touchEndY = e.changedTouches[0].clientY;
+                const swipeDistance = touchEndY - touchStartY;
+                
+                // Minimum swipe distance to trigger navigation
+                if (Math.abs(swipeDistance) > 50) {
+                    if (swipeDistance < 0) { // Swipe up - next photo
+                        if (currentPhotoIndex < currentPhotos.length - 1) {
+                            currentPhotoIndex++;
+                            lightboxImg.src = currentPhotos[currentPhotoIndex];
+                        } else if (hasMore) {
+                            // We're at the last photo and there are more to load
+                            loadItems().then(() => {
+                                // After loading, move to the next photo if available
+                                if (currentPhotoIndex < currentPhotos.length - 1) {
+                                    currentPhotoIndex++;
+                                    lightboxImg.src = currentPhotos[currentPhotoIndex];
+                                }
+                            });
+                        }
+                    } else { // Swipe down - previous photo
+                        if (currentPhotoIndex > 0) {
+                            currentPhotoIndex--;
+                            lightboxImg.src = currentPhotos[currentPhotoIndex];
+                        }
+                    }
+                }
+            }, { passive: true });
         }
 
         function closeLightbox() {
-            document.getElementById('lightbox').style.display = 'none';
+            const lightbox = document.getElementById('lightbox');
+            lightbox.style.display = 'none';
+            // Remove touch event listeners when closing
+            lightbox.replaceWith(lightbox.cloneNode(true));
         }
     </script>
 </body>
