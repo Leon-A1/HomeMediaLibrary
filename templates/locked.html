@@ -65,53 +65,6 @@
             object-fit: cover;
         }
 
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            max-width: 90%;
-            max-height: 90vh;
-        }
-
-        .modal-content img {
-            max-width: 100%;
-            max-height: 90vh;
-        }
-
-        .modal-content video {
-            max-width: 100%;
-            max-height: 90vh;
-        }
-
-        .close-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: white;
-            font-size: 30px;
-            cursor: pointer;
-        }
-
-        .media-card video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            cursor: pointer;
-            /* Mute by default */
-            muted: true;
-        }
-
         .play-button {
             position: absolute;
             width: 50px;
@@ -121,6 +74,25 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
+
+        /* Fullscreen container styles */
+        .fullscreen-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            z-index: 1000;
+            display: none;
+        }
+
+        .fullscreen-container img,
+        .fullscreen-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -128,23 +100,25 @@
         <h1>Protected Content</h1>
         <a href="/logout" class="logout-btn">Logout</a>
     </div>
+    
     <div class="loading" id="loading" style="display: none; text-align: center; padding: 20px; color: white;">
         Loading...
     </div>
+    
     <div class="media-grid" id="mediaGrid">
         <!-- Items will be loaded dynamically -->
     </div>
 
-    <div class="modal" id="mediaModal">
-        <span class="close-button" onclick="closeModal()">&times;</span>
-        <div class="modal-content" id="modalContent">
-        </div>
+    <div class="fullscreen-container" id="fullscreenContainer">
+        <!-- Content will be added dynamically -->
     </div>
 
     <script>
         let currentPage = 1;
         let loading = false;
         let hasMore = true;
+        let currentMedia = [];
+        let currentIndex = 0;
 
         loadItems();
 
@@ -174,42 +148,51 @@
                         );
                         const card = document.createElement('div');
                         card.className = 'media-card';
+                        const mediaPath = `/locked-media/${item}`;
                         
                         if (isVideo) {
-                            card.onclick = () => openModal(`/locked-media/${item}`, 'video');
+                            card.onclick = () => openFullscreen(mediaPath, 'video');
                             card.innerHTML = `
                                 <svg class="play-button" viewBox="0 0 24 24" fill="white">
                                     <path d="M8 5v14l11-7z"/>
                                 </svg>
                                 <video muted playsinline>
-                                    <source src="/locked-media/${item}" type="video/mp4">
+                                    <source src="${mediaPath}" type="video/mp4">
                                 </video>
                             `;
 
                             const videoElement = card.querySelector('video');
                             const playButton = card.querySelector('.play-button');
 
-                            // Initially hide play button
                             playButton.style.opacity = '0';
                             
-                            // Play first 5 seconds when loaded
                             videoElement.addEventListener('loadedmetadata', () => {
                                 videoElement.play();
                                 setTimeout(() => {
                                     videoElement.pause();
-                                    // Fade in play button after video pauses
                                     playButton.style.opacity = '1';
-                                }, 5000); // Stop after 5 seconds
+                                }, 5000);
                             });
                         } else {
-                            card.onclick = () => openModal(`/locked-media/${item}`, 'image');
+                            card.onclick = () => openFullscreen(mediaPath, 'image');
                             card.innerHTML = `
-                                <img src="/locked-media/${item}" alt="${item}">
+                                <img src="${mediaPath}" alt="${item}">
                             `;
                         }
                         
                         grid.appendChild(card);
                     });
+
+                    // Store media paths for navigation
+                    if (currentPage === 1) {
+                        currentMedia = [];
+                    }
+                    currentMedia = currentMedia.concat(data.items.map(item => ({
+                        path: `/locked-media/${item}`,
+                        type: ['.mp4', '.avi', '.mov', '.mkv'].some(ext => 
+                            item.toLowerCase().endsWith(ext)
+                        ) ? 'video' : 'image'
+                    })));
 
                     hasMore = data.hasMore;
                     currentPage++;
@@ -223,29 +206,105 @@
                 });
         }
 
-        function openModal(src, type) {
-            const modal = document.getElementById('mediaModal');
-            const content = document.getElementById('modalContent');
+        function openFullscreen(src, type) {
+            const container = document.getElementById('fullscreenContainer');
+            currentIndex = currentMedia.findIndex(item => item.path === src);
             
-            content.innerHTML = type === 'image' 
-                ? `<img src="${src}" alt="Full size image">`
-                : `<video controls autoplay><source src="${src}" type="video/mp4"></video>`;
+            updateFullscreenContent(src, type);
+            container.style.display = 'block';
+
+            const element = container.firstElementChild;
             
-            modal.style.display = 'flex';
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('mediaModal');
-            const content = document.getElementById('modalContent');
-            modal.style.display = 'none';
-            content.innerHTML = '';
-        }
-
-        document.getElementById('mediaModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal();
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+            } else if (element.msRequestFullscreen) {
+                element.msRequestFullscreen();
             }
-        });
+
+            if (type === 'video') {
+                element.play();
+            }
+
+            // Touch event handling for navigation
+            let touchStartY = 0;
+
+            element.addEventListener('touchstart', function(e) {
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+
+            element.addEventListener('touchend', function(e) {
+                const touchEndY = e.changedTouches[0].clientY;
+                const swipeDistance = touchEndY - touchStartY;
+                
+                if (Math.abs(swipeDistance) > 50) {
+                    if (swipeDistance < 0) { // Swipe up - next
+                        showNext();
+                    } else { // Swipe down - previous
+                        showPrevious();
+                    }
+                }
+            }, { passive: true });
+        }
+
+        function updateFullscreenContent(src, type) {
+            const container = document.getElementById('fullscreenContainer');
+            container.innerHTML = type === 'image' 
+                ? `<img src="${src}" alt="Fullscreen image">`
+                : `<video controls><source src="${src}" type="video/mp4"></video>`;
+        }
+
+        function showNext() {
+            if (currentIndex < currentMedia.length - 1) {
+                currentIndex++;
+                const nextItem = currentMedia[currentIndex];
+                updateFullscreenContent(nextItem.path, nextItem.type);
+                if (nextItem.type === 'video') {
+                    document.querySelector('#fullscreenContainer video').play();
+                }
+            } else if (hasMore) {
+                loadItems().then(() => {
+                    if (currentIndex < currentMedia.length - 1) {
+                        currentIndex++;
+                        const nextItem = currentMedia[currentIndex];
+                        updateFullscreenContent(nextItem.path, nextItem.type);
+                        if (nextItem.type === 'video') {
+                            document.querySelector('#fullscreenContainer video').play();
+                        }
+                    }
+                });
+            }
+        }
+
+        function showPrevious() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                const prevItem = currentMedia[currentIndex];
+                updateFullscreenContent(prevItem.path, prevItem.type);
+                if (prevItem.type === 'video') {
+                    document.querySelector('#fullscreenContainer video').play();
+                }
+            }
+        }
+
+        // Handle fullscreen exit
+        document.addEventListener('fullscreenchange', handleFullscreenExit);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
+        document.addEventListener('mozfullscreenchange', handleFullscreenExit);
+        document.addEventListener('MSFullscreenChange', handleFullscreenExit);
+
+        function handleFullscreenExit() {
+            if (!document.fullscreenElement && 
+                !document.webkitFullscreenElement && 
+                !document.mozFullScreenElement && 
+                !document.msFullscreenElement) {
+                
+                const container = document.getElementById('fullscreenContainer');
+                container.style.display = 'none';
+                container.innerHTML = '';
+            }
+        }
     </script>
 </body>
-</html> 
+</html>
