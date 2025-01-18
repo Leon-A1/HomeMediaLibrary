@@ -1,4 +1,3 @@
-Flask==3.0.0
-ebooklib==0.18.1
-Pillow==10.2.0
-werkzeug==3.0.1
+flask
+ebooklib
+Pillow
