@@ -1,0 +1,112 @@
+<!-- templates/notebook.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Notebook</title>
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 20px;
+        }
+        .page-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .page-card {
+            background: #2c2c2c;;
+            border-radius: 12px;
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #404040;
+            text-decoration: none;
+
+        }
+        .page-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .page-card h3 {
+            margin: 0 0 10px 0;
+            color: #4a9eff;
+            font-size: 1.2em;
+        }
+        .date-info {
+            color: #888;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+        }
+        .create-btn {
+            background: #4a9eff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .create-btn:hover {
+            background: #357abd;
+        }
+        .preview {
+            color: #aaa;
+            line-height: 1.5;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+        .preview strong {
+            color: #fff;
+            font-weight: 600;
+        }
+        .preview em {
+            font-style: italic;
+        }
+        .preview u {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Notebook</h1>
+    <button class="create-btn" onclick="createPage()">
+        <span>+</span> Create New Page
+    </button>
+    
+    <div class="page-grid">
+        {% for page in pages %}
+        <a href="/notebook/{{ page.name }}" class="page-card">
+            <h3>{{ page.name }}</h3>
+            <div class="date-info">
+                Created: {{ page.createdAt.split('T')[0] }}
+                {% if page.updatedAt != page.createdAt %}
+                <br>Updated: {{ page.updatedAt.split('T')[0] }}
+                {% endif %}
+            </div>
+            <div class="preview">{{ page.content|safe|truncate(100) }}</div>
+        </a>
+        {% endfor %}
+    </div>
+
+    <script>
+        function createPage() {
+            fetch('/notebook/create', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = `/notebook/${data.page.name}`;
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

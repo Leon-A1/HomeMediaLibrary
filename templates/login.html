@@ -95,7 +95,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    window.location.href = '/locked';
+                    window.location.href = '/';
                 } else {
                     document.getElementById('error-message').style.display = 'block';
                 }

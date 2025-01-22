@@ -1,0 +1,193 @@
+<!-- templates/notebook_page.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ page.name }}</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        .button {
+            background: #4a9eff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .button:hover {
+            background: #357abd;
+        }
+        .button.cancel {
+            background: #ff4a4a;
+        }
+        .button.cancel:hover {
+            background: #bd3535;
+        }
+        .content {
+            background: #2d2d2d;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #404040;
+            min-height: 400px;
+            margin-top: 20px;
+        }
+        #editor {
+            width: 100%;
+            min-height: 400px;
+            background: transparent;
+            color: #fff;
+            border: none;
+            font-family: inherit;
+            font-size: inherit;
+            line-height: 1.6;
+            resize: none;
+            padding: 0;
+        }
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #404040;
+            border-radius: 8px;
+        }
+        .format-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .format-btn.active {
+            background: #4a9eff !important;
+            color: white !important;
+        }
+        .format-btn:hover {
+            background: #4d4d4d;
+        }
+        .date-info {
+            color: #888;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+        #viewMode {
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        #viewMode strong {
+            color: #fff;
+            font-weight: 600;
+        }
+        #viewMode em {
+            font-style: italic;
+        }
+        #viewMode u {
+            text-decoration: underline;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.0/purify.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <a href="/notebook" class="button">← Back</a>
+        <div class="button-group">
+            <button onclick="toggleEdit()" id="editBtn" class="button">Edit</button>
+        </div>
+    </div>
+
+    <h1>{{ page.name }}</h1>
+    <div class="date-info">
+        Created: {{ page.createdAt.split('T')[0] }}
+        {% if page.updatedAt != page.createdAt %}
+        | Updated: {{ page.updatedAt.split('T')[0] }}
+        {% endif %}
+    </div>
+    
+    <div id="viewMode" class="content">{{ page.content|safe }}</div>
+    <div id="editMode" class="content" style="display: none;">
+        <div class="toolbar">
+            <button class="format-btn" data-command="bold" onclick="formatText('bold')" title="Bold"><strong>B</strong></button>
+            <button class="format-btn" data-command="italic" onclick="formatText('italic')" title="Italic"><em>I</em></button>
+            <button class="format-btn" data-command="underline" onclick="formatText('underline')" title="Underline"><u>U</u></button>
+        </div>
+        <div id="editor" contenteditable="true">{{ page.content|safe }}</div>
+        <div class="button-group" style="margin-top: 20px;">
+            <button onclick="savePage()" class="button">Save Changes</button>
+            <button onclick="toggleEdit()" class="button cancel">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleEdit() {
+            const viewMode = document.getElementById('viewMode');
+            const editMode = document.getElementById('editMode');
+            const editBtn = document.getElementById('editBtn');
+            
+            if (viewMode.style.display !== 'none') {
+                viewMode.style.display = 'none';
+                editMode.style.display = 'block';
+                editBtn.textContent = 'Editing...';
+                updateButtonStates();
+            } else {
+                viewMode.style.display = 'block';
+                editMode.style.display = 'none';
+                editBtn.textContent = 'Edit';
+            }
+        }
+
+        function updateButtonStates() {
+            const buttons = document.querySelectorAll('.format-btn');
+            buttons.forEach(btn => {
+                const cmd = btn.getAttribute('data-command');
+                btn.classList.toggle('active', document.queryCommandState(cmd));
+            });
+        }
+
+        function formatText(command) {
+            document.execCommand(command, false, null);
+            updateButtonStates();
+        }
+
+        function savePage() {
+            let content = document.getElementById('editor').innerHTML;
+            content = DOMPurify.sanitize(content);
+            
+            fetch(window.location.pathname, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                }
+            });
+        }
+
+        // Add event listeners for selection changes
+        document.getElementById('editor').addEventListener('mouseup', updateButtonStates);
+        document.getElementById('editor').addEventListener('keyup', updateButtonStates);
+    </script>
+</body>
+</html>

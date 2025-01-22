@@ -10,12 +10,11 @@ from datetime import datetime
 from PIL.ExifTags import TAGS
 import time
 
-
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
 app = Flask(__name__,template_folder= current_directory+"/templates")
 
-
+NOTEBOOK_DIR = current_directory + "/Notebook"
 MUSIC_DIR = current_directory+"/Music"
 MEDIA_DIR = current_directory+"/Photos&Videos"
 BOOK_DIR = current_directory+"/Books"  
@@ -27,7 +26,7 @@ ALLOWED_EXTENSIONS = {'epub'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 FINISHED_BOOKS_FILE = current_directory+"/finished_books.json"
-PASSWORD = ""  # Locked will be hidden until a password is set
+PASSWORD = "123"  # Locked will be hidden until a password is set
 
 
 def load_finished_books():
@@ -497,6 +496,110 @@ def add_shuffled_song():
 
 app.secret_key = 'your-secret-key-here'  # Change this to a secure random key in production
 
+
+
+def load_notebook_pages():
+    pages = []
+    if os.path.exists(NOTEBOOK_DIR):
+        for filename in os.listdir(NOTEBOOK_DIR):
+            if filename.endswith('.json'):
+                filepath = os.path.join(NOTEBOOK_DIR, filename) 
+                try:
+                    with open(filepath, 'r') as f:
+                        page_data = json.load(f)
+                        pages.append(page_data)
+                except Exception as e:
+                    print(f"Error loading notebook page {filename}: {e}")
+    return pages
+
+
+
+
+@app.route('/notebook')
+def notebook():
+    if not check_auth():
+        return render_template('login.html')
+    pages = load_notebook_pages()
+    pages.sort(key=lambda x: x['createdAt'], reverse=True)
+    return render_template('notebook.html', pages=pages)
+
+@app.route('/notebook/create', methods=['POST'])
+def create_page():
+    now = datetime.now()
+    base_date_str = now.strftime("%Y-%m-%d")
+
+    existing_files = []
+    for filename in os.listdir(NOTEBOOK_DIR):
+        if filename.startswith(base_date_str) and filename.endswith('.json'):
+            existing_files.append(filename)
+
+    suffixes = []
+    for filename in existing_files:
+        name_part = filename[:-5]  # Remove .json
+        if name_part == base_date_str:
+            suffixes.append(1)
+        else:
+            remaining = name_part[len(base_date_str):]
+            if remaining.startswith('-') and remaining[1:].isdigit():
+                suffix = int(remaining[1:])
+                suffixes.append(suffix)
+
+    max_suffix = max(suffixes) if suffixes else 0
+    new_suffix = max_suffix + 1 if max_suffix > 0 else 1
+
+    if new_suffix == 1:
+        new_filename = f"{base_date_str}.json"
+    else:
+        new_filename = f"{base_date_str}-{new_suffix}.json"
+
+    new_name = new_filename[:-5]  # Remove .json extension
+
+    new_page = {
+        "name": new_name,
+        "content": "",
+        "createdAt": now.isoformat(),
+        "updatedAt": now.isoformat()
+    }
+
+    filepath = os.path.join(NOTEBOOK_DIR, new_filename)
+    with open(filepath, 'w') as f:
+        json.dump(new_page, f, indent=4)
+
+    return jsonify({"success": True, "page": new_page})
+
+@app.route('/notebook/<name>')
+def get_page(name):
+    filename = f"{name}.json"
+    filepath = os.path.join(NOTEBOOK_DIR, filename)
+
+    if not os.path.exists(filepath):
+        abort(404)
+
+    with open(filepath, 'r') as f:
+        page = json.load(f)
+
+    return render_template('notebook_page.html', page=page)
+
+@app.route('/notebook/<name>', methods=['POST'])
+def update_page(name):
+    content = request.json.get('content')
+    filename = f"{name}.json"
+    filepath = os.path.join(NOTEBOOK_DIR, filename)
+
+    if not os.path.exists(filepath):
+        abort(404)
+
+    with open(filepath, 'r') as f:
+        page = json.load(f)
+
+    page['content'] = content
+    page['updatedAt'] = datetime.now().isoformat()
+
+    with open(filepath, 'w') as f:
+        json.dump(page, f, indent=4)
+
+    return jsonify({"success": True, "page": page})
+
 if __name__ == '__main__':
     print("Starting server...")
     os.makedirs(BOOK_DIR, exist_ok=True)
@@ -504,5 +607,6 @@ if __name__ == '__main__':
     os.makedirs(LOCKED_DIR, exist_ok=True)
     os.makedirs(MEDIA_DIR, exist_ok=True)
     os.makedirs(SHUFFLED_DIR, exist_ok=True)
+    os.makedirs(NOTEBOOK_DIR, exist_ok=True)
     # Set the host to 0.0.0.0 to make the server accessible from other devices on the network
     app.run(host='0.0.0.0', port=5000)
