@@ -6,7 +6,7 @@
     <title>{{ page.name }}</title>
     <style>
         body {
-            background-color: #1a1a1a;
+            background-color: #000000;
             color: #ffffff;
             font-family: 'Segoe UI', Arial, sans-serif;
             margin: 20px;
@@ -102,12 +102,19 @@
         #viewMode u {
             text-decoration: underline;
         }
+
+        .back-button {
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.0/purify.min.js"></script>
 </head>
 <body>
     <div class="header">
-        <a href="/notebook" class="button">← Back</a>
+        <a href="/notebook" class="back-button" style="text-decoration: none;background-color: #000000;">🔙</a>
         <div class="button-group">
             <button onclick="toggleEdit()" id="editBtn" class="button">Edit</button>
         </div>
