@@ -7,6 +7,29 @@ import queue
 # Add this global variable at the top of the file
 progress_queue = queue.Queue()
 
+
+# Specify the directory to check
+directory = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Music/Downloads"
+def clean_music_downloads():
+
+    # Iterate through files in the directory
+    for filename in os.listdir(directory):
+
+        if filename.startswith("NA -"):
+
+            new_filename = filename[4:]  # Remove "NA -" (4 characters)
+            old_path = os.path.join(directory, filename)
+            new_path = os.path.join(directory, new_filename)
+
+            # Rename the file
+            os.rename(old_path, new_path)
+            print(f'Renamed: "{filename}" → "{new_filename}"')
+
+
+    print("Renaming complete.")
+
+
+
 def download_from_youtube(url, format_type, download_id):
     try:
         # Define base paths
@@ -81,6 +104,7 @@ def download_from_youtube(url, format_type, download_id):
             'complete': True,
             'success': True
         })
+        clean_music_downloads()
         return {"success": True}
 
     except Exception as e:
@@ -91,4 +115,9 @@ def download_from_youtube(url, format_type, download_id):
             'success': False,
             'error': str(e)
         })
+        clean_music_downloads()
         return {"success": False, "error": str(e)}
+
+
+if __name__ == "__main__":
+    clean_music_downloads()
