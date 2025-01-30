@@ -607,7 +607,7 @@ def update_page(name):
 
     return jsonify({"success": True, "page": page})
 
-def download_from_youtube(url, format_type, download_id):
+def download_from_youtube(url, format_type, download_id, folder):
     try:
         # Define base paths
         base_path = current_directory
@@ -622,18 +622,22 @@ def download_from_youtube(url, format_type, download_id):
                     progress_queue.put({
                         'id': download_id,
                         'progress': round(progress, 1),
-                        'status': 'Downloading...'
+                        'status': 'Downloading...',
+                        'folder': folder
                     })
             elif d['status'] == 'finished':
                 progress_queue.put({
                     'id': download_id,
                     'progress': 100,
-                    'status': 'Processing...'
+                    'status': 'Processing...',
+                    'folder': folder
                 })
 
         # Set output folder based on format type
         if format_type == "audio":
-            output_folder = os.path.join(base_path, "Music/Downloads")
+            downloads_folder = folder if folder else "Downloads"
+            output_folder = os.path.join(base_path, f"Music/{downloads_folder}")
+
             output_template = f"{output_folder}/%(artist)s - %(title)s (%(upload_date>%Y)s).%(ext)s"
             ydl_opts = {
                 'format': 'bestaudio/best',
@@ -669,7 +673,8 @@ def download_from_youtube(url, format_type, download_id):
             'id': download_id,
             'progress': 100,
             'complete': True,
-            'success': True
+            'success': True,
+            'folder': folder
         })
         return {"success": True}
 
@@ -679,7 +684,8 @@ def download_from_youtube(url, format_type, download_id):
             'progress': 100,
             'complete': True,
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'folder': folder
         })
         return {"success": False, "error": str(e)}
 
@@ -692,24 +698,25 @@ def download():
     data = request.get_json()
     url = data.get('url')
     format_type = data.get('format')
+    folder = data.get('folder', 'Downloads')
     
     if not url:
         return jsonify({"success": False, "error": "No URL provided"})
     
-    result = download_from_youtube(url, format_type, f"{url}_{format_type}")
+    result = download_from_youtube(url, format_type, f"{url}_{format_type}", folder)
     return jsonify(result)
 
 @app.route('/download-progress')
 def download_progress_stream():
     url = request.args.get('url')
     format_type = request.args.get('format')
+    folder = request.args.get('folder', 'Downloads')  # Default to Downloads
     download_id = f"{url}_{format_type}"
     
     def generate():
-        # Start download in a separate thread
         thread = threading.Thread(
             target=download_from_youtube,
-            args=(url, format_type, download_id),
+            args=(url, format_type, download_id, folder),  # Add folder parameter
             daemon=True
         )
         thread.start()
@@ -734,6 +741,14 @@ def download_progress_stream():
             'Connection': 'keep-alive'
         }
     )
+
+@app.route('/api/music-folders')
+def get_music_folders():
+    folders = ['Downloads']  # Start with Downloads as default
+    for item in os.listdir(MUSIC_DIR):
+        if os.path.isdir(os.path.join(MUSIC_DIR, item)) and item != 'Downloads':
+            folders.append(item)
+    return jsonify(folders)
 
 if __name__ == '__main__':
     print("Starting server...")

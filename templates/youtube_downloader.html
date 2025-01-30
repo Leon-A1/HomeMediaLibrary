@@ -139,6 +139,11 @@
                 <span>Video (MP4)</span>
             </label>
         </div>
+        <div id="folder-select-container" style="margin-bottom: 20px;">
+            <select id="folder-select" style="width: 100%; padding: 12px; border: none; border-radius: 6px; background-color: #404040; color: var(--text-color); font-size: 16px;">
+                <option value="Downloads">Downloads</option>
+            </select>
+        </div>
         <button onclick="startDownload()">Download</button>
         <div id="progress-container" style="display: none; margin-top: 20px;">
             <div class="progress-bar">
@@ -150,14 +155,45 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const formatRadios = document.querySelectorAll('input[name="format"]');
+            const folderContainer = document.getElementById('folder-select-container');
+            
+            loadFolders();
+            
+            formatRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    folderContainer.style.display = this.value === 'audio' ? 'block' : 'none';
+                });
+            });
+            document.getElementById('folder-select').addEventListener('change', function() {
+                console.log('Folder changed:', this.value);
+            });
+
+            
+        });
+
+        function loadFolders() {
+            fetch('/api/music-folders')
+                .then(response => response.json())
+                .then(folders => {
+                    const select = document.getElementById('folder-select');
+                    select.innerHTML = folders.map(folder => 
+                        `<option value="${folder}">${folder}</option>`
+                    ).join('');
+                });
+        }
+
         function startDownload() {
             const url = document.getElementById('url').value;
             const format = document.querySelector('input[name="format"]:checked').value;
+            const folder = document.getElementById('folder-select').value;
             const statusDiv = document.getElementById('status');
             const progressContainer = document.getElementById('progress-container');
             const progressBar = document.getElementById('progress');
             const progressText = document.getElementById('progress-text');
-            
+
+            console.log('Folder:', folder);
             if (!url) {
                 statusDiv.textContent = 'Please enter a URL';
                 statusDiv.className = 'error';
@@ -171,7 +207,7 @@
             progressText.textContent = '0%';
 
             // Create EventSource for progress updates
-            const eventSource = new EventSource(`/download-progress?url=${encodeURIComponent(url)}&format=${format}`);
+            const eventSource = new EventSource(`/download-progress?url=${encodeURIComponent(url)}&format=${format}&folder=${folder}`);
             
             eventSource.onmessage = function(event) {
                 const data = JSON.parse(event.data);
