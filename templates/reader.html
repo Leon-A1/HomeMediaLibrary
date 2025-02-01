@@ -31,10 +31,14 @@
 
         #content {
             max-width: 800px;
+            width: 100%;
             margin: 0 auto;
             padding: 20px;
             line-height: 1.6;
             font-size: 1.2em;
+        }
+        #content img {
+            max-width: 100%;
         }
 
         .nav-area {
@@ -131,6 +135,7 @@
             if (book && book.pages) {
                 document.getElementById('content').innerHTML = book.pages[currentPage];
                 document.getElementById('current-page').textContent = currentPage + 1;
+                document.getElementById('content').scrollIntoView({ behavior: 'smooth' });
             }
         }
 

@@ -767,6 +767,19 @@ def get_book_content(filename):
     book_path = os.path.join(BOOK_DIR, filename)
     book = epub.read_epub(book_path)
     
+    # Create a dictionary to store image data
+    image_map = {}
+    
+    # First, collect all images from the book
+    for item in book.get_items():
+        if item.get_type() == ebooklib.ITEM_IMAGE:
+            # Store image data using both full name and filename
+            image_data = base64.b64encode(item.get_content()).decode('utf-8')
+            ext = item.get_name().split('.')[-1]
+            image_map[item.get_name()] = f"data:image/{ext};base64,{image_data}"
+            # Also store by just filename for relative path matching
+            image_map[os.path.basename(item.get_name())] = f"data:image/{ext};base64,{image_data}"
+    
     pages = []
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
@@ -776,6 +789,17 @@ def get_book_content(filename):
             # Remove existing styles
             for tag in soup.find_all(['style', 'link']):
                 tag.decompose()
+            
+            # Update image sources with base64 data
+            for img in soup.find_all('img'):
+                src = img.get('src')
+                if src:
+                    # Handle various path formats
+                    basename = os.path.basename(src)
+                    if basename in image_map:
+                        img['src'] = image_map[basename]
+                    elif src in image_map:
+                        img['src'] = image_map[src]
             
             # Clean up the HTML and add it to pages
             content = str(soup.body) if soup.body else str(soup)
