@@ -917,6 +917,40 @@ def delete_bookmark():
             return jsonify({'success': True})
     return jsonify({'success': False, 'message': 'Bookmark not found'}), 404
 
+@app.route('/manifest.json')
+def manifest():
+    # Get the "book" query parameter from the URL. For example:
+    # /manifest.json?book=MyBook.epub
+    book_filename = request.args.get('book')
+    if book_filename and allowed_file(book_filename):
+        book_path = os.path.join(BOOK_DIR, book_filename)
+        cover_data = extract_cover(book_path)
+        # If cover_data is empty, fall back to a default
+        if not cover_data:
+            cover_data = url_for('static', filename='default-icon.png', _external=True)
+    else:
+        cover_data = url_for('static', filename='default-icon.png', _external=True)
+
+    manifest_data = {
+        "name": "Book Reader",
+        "short_name": "Reader",
+        "start_url": url_for('read_book', filename=book_filename, _external=True) if book_filename else url_for('index', _external=True),
+        "display": "standalone",
+        "background_color": "#000000",
+        "theme_color": "#000000",
+        "icons": [
+            {
+                "src": cover_data,
+                "sizes": "512x512",
+                "type": "image/png"  # Adjust if your cover is JPEG ("image/jpeg")
+            }
+        ]
+    }
+    response = jsonify(manifest_data)
+    # Prevent caching so that updated icons show immediately.
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
+
 if __name__ == '__main__':
     print("Starting server...")
     os.makedirs(BOOK_DIR, exist_ok=True)
