@@ -95,10 +95,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            /* background-color: rgba(255, 255, 255, 0.1); */
             border-top: 1px solid rgba(255, 255, 255, 0.2);
-            /* background-color: rgba(0, 0, 0, 0.8); */
-
             display: flex;
             justify-content: center;
             align-items: center;
@@ -115,6 +112,18 @@
         }
         #bottom-nav span {
             font-size: 1.2em;
+        }
+        /* New CSS for the fullscreen button in the bottom navbar */
+        #fullscreen-button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5em;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -136,6 +145,8 @@
         <button id="prev-page"><i class="fas fa-arrow-left"></i></button>
         <span id="current-page">Page 1</span>
         <button id="next-page"><i class="fas fa-arrow-right"></i></button>
+        <!-- New fullscreen toggle button -->
+        <button id="fullscreen-button"><i class="fas fa-expand"></i></button>
     </div>
 
     <script>
@@ -309,6 +320,25 @@
         document.getElementById('font-size-button').addEventListener('click', () => {
             fontSize = fontSize === 1.2 ? 1.5 : fontSize === 1.5 ? 1.8 : 1.2;
             document.getElementById('content').style.fontSize = `${fontSize}em`;
+        });
+
+        // New event listener for the fullscreen button
+        document.getElementById('fullscreen-button').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen()
+                .then(() => {
+                    document.getElementById('fullscreen-button').innerHTML = '<i class="fas fa-compress"></i>';
+                    document.getElementById('reader-container').style.marginBottom = '55px';
+                })
+                .catch(err => console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`));
+            } else {
+                document.exitFullscreen()
+                .then(() => {
+                    document.getElementById('fullscreen-button').innerHTML = '<i class="fas fa-expand"></i>';
+                    document.getElementById('reader-container').style.marginBottom = '160px';
+                })
+                .catch(err => console.error(`Error attempting to disable full-screen mode: ${err.message} (${err.name})`));
+            }
         });
 
         loadBook();
