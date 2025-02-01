@@ -30,7 +30,7 @@
             position: relative;
             padding: 0px;
             /* Add space at the bottom so content isn't hidden behind fixed nav */
-            margin-bottom: 160px;
+            margin-bottom: 60px;
         }
 
         /* Ensure the reading content is on top */
@@ -444,7 +444,7 @@
                 document.exitFullscreen()
                 .then(() => {
                     document.getElementById('fullscreen-button').innerHTML = '<i class="fas fa-expand"></i>';
-                    document.getElementById('reader-container').style.marginBottom = '160px';
+                    document.getElementById('reader-container').style.marginBottom = '60px';
                 })
                 .catch(err => console.error(`Error attempting to disable full-screen mode: ${err.message} (${err.name})`));
             }
@@ -525,6 +525,21 @@
         const bookmarkCloseButton = document.getElementById('bookmark-close-button');
         bookmarkCloseButton.addEventListener('click', () => {
             bookmarkSidebar.style.display = 'none';
+        });
+
+        // Add an event listener to close the bookmarks sidebar when clicking outside of it
+        document.addEventListener('click', function(event) {
+            const bookmarkSidebar = document.getElementById('bookmark-sidebar');
+            const bookmarkToggleButton = document.getElementById('bookmark-toggle');
+
+            // If the sidebar is visible and the click target is not within the sidebar or on the toggle button, close it.
+            if (bookmarkSidebar.style.display === 'block' &&
+                !bookmarkSidebar.contains(event.target) &&
+                event.target !== bookmarkToggleButton &&
+                !bookmarkToggleButton.contains(event.target)
+            ) {
+                bookmarkSidebar.style.display = 'none';
+            }
         });
 
         loadBook();
