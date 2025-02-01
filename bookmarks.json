@@ -5,12 +5,6 @@
             "word": "Introduction",
             "occurrence": 1,
             "timestamp": "2025-02-01T09:53:24.770643"
-        },
-        {
-            "page": 9,
-            "word": "The Epic of Gilgamesh",
-            "occurrence": 1,
-            "timestamp": "2025-02-01T09:54:24.406657"
         }
     ],
     "The Power Of Now - Eckhart Tolle.epub": [
@@ -24,9 +18,9 @@
     "against_empathy_bloom_paul.epub": [
         {
             "page": 5,
-            "word": "Others",
+            "word": "was",
             "occurrence": 1,
-            "timestamp": "2025-02-01T10:06:13.549168"
+            "timestamp": "2025-02-01T15:09:49.320725"
         }
     ],
     "A Guide to the Good Life_ The Ancient Art of Stoic Joy by William B. Irvine.epub": [
@@ -45,5 +39,52 @@
             "timestamp": "2025-02-01T12:24:31.780770"
         }
     ],
-    "boredandbrilliant.epub": []
+    "boredandbrilliant.epub": [
+        {
+            "page": 5,
+            "word": "Boredom",
+            "occurrence": 1,
+            "timestamp": "2025-02-01T14:50:08.837086"
+        },
+        {
+            "page": 9,
+            "word": "moment",
+            "occurrence": 1,
+            "timestamp": "2025-02-01T14:53:08.872419"
+        },
+        {
+            "page": 10,
+            "word": "my",
+            "occurrence": 1,
+            "timestamp": "2025-02-01T14:53:16.210751"
+        },
+        {
+            "page": 10,
+            "word": "and",
+            "occurrence": 2,
+            "timestamp": "2025-02-01T14:53:21.609438"
+        }
+    ],
+    "Rewire_ Change Your Brain to Break Bad Habits, Overcome Addictions, Conquer Self-Destruc tive Behavior ( PDFDrive ).epub": [
+        {
+            "page": 5,
+            "word": "CHAPTER",
+            "occurrence": 1,
+            "timestamp": "2025-02-01T15:04:05.669260"
+        }
+    ],
+    "_OceanofPDF.com_The_Gifts_of_Imperfection_Let_Go_of_Who_You_Think_Youre_Supposed_to_Be_and_Embrace_Who_You_Are_-_Brene_Brown.epub": [
+        {
+            "page": 5,
+            "word": "contents",
+            "occurrence": 1,
+            "timestamp": "2025-02-01T14:55:45.512848"
+        },
+        {
+            "page": 9,
+            "word": "Karen Casey",
+            "occurrence": 1,
+            "timestamp": "2025-02-01T14:55:59.150129"
+        }
+    ]
 }

@@ -839,9 +839,13 @@ def api_bookmarks():
     book = request.args.get('book')
     page = request.args.get('page')
     bookmarks = load_bookmarks()
-    if book and page and book in bookmarks:
-        bookmarks_for_page = [bm for bm in bookmarks[book] if str(bm.get('page')) == str(page)]
-        return jsonify(bookmarks_for_page)
+    if book in bookmarks:
+        if page:
+            bookmarks_for_page = [bm for bm in bookmarks[book] if str(bm.get('page')) == str(page)]
+            return jsonify(bookmarks_for_page)
+        else:
+            # Return all bookmarks for the specified book
+            return jsonify(bookmarks[book])
     return jsonify([])
 
 @app.route('/api/bookmarks/last')
