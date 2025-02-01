@@ -377,25 +377,49 @@ def get_photos():
 def videos():
     return render_template('videos.html')
 
+def get_video_date(file_path):
+    """
+    Returns the creation date (as a UNIX timestamp) of the video by checking its metadata via ffprobe.
+    Falls back to the file modification time if the metadata is missing or an error occurs.
+    """
+    try:
+        command = [
+            "ffprobe",
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_entries", "format_tags=creation_time",
+            file_path
+        ]
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        data = json.loads(result.stdout)
+        creation_time = data.get("format", {}).get("tags", {}).get("creation_time")
+        if creation_time:
+            # Example format: "2020-08-05T14:12:31.000000Z"
+            dt = datetime.fromisoformat(creation_time.replace("Z", "+00:00"))
+            return dt.timestamp()
+    except Exception as e:
+        print(f"Error reading video metadata for {file_path}: {e}")
+    return os.path.getmtime(file_path)
+
 @app.route('/api/videos')
 def get_videos():
     page = int(request.args.get('page', 1))
     path = request.args.get('path', '')
     per_page = 5
 
-    # Get folders and files using the video-specific function
+    # Get folders and video files using the video-specific function
     folders, videos = scan_video_contents(MEDIA_DIR, path)
     
-    # Sort folders and videos
+    # Sort folders alphabetically
     folders.sort(key=lambda x: x['name'].lower())
-    videos.sort()
+    
+    # Sort videos by metadata "creation_time" (newest first). Falls back to file modified time.
+    videos.sort(key=lambda video: get_video_date(os.path.join(MEDIA_DIR, path, video)), reverse=True)
 
     # Paginate videos
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     paginated_videos = videos[start_idx:end_idx]
-
-    # Fix hasMore calculation
     has_more = end_idx < len(videos)
 
     return jsonify({
