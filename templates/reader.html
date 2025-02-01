@@ -156,7 +156,7 @@
             top: 0; /* below the toolbar */
             width: 300px;
             bottom: 0;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.95);
             color: #e0e0e0;
             overflow-y: auto;
             padding: 10px;
@@ -183,6 +183,9 @@
             border-bottom: 1px solid #555;
             cursor: pointer;
             position: relative;
+            /* make the bookmark item text not to overflow with the close button */
+            max-width: 275px;
+            padding-right: 20px;
         }
         .delete-bookmark {
             position: absolute;
