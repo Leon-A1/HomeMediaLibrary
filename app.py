@@ -762,6 +762,32 @@ def read_book(filename):
     title = filename[:-5]  # remove .epub
     return render_template('reader.html', filename=filename, title=title)
 
+def split_long_page(content, max_length=1500):
+    """
+    Splits a long HTML content string into multiple pages.
+    This example splits based on paragraph breaks (</p>) and ensures that each chunk doesn't exceed max_length characters.
+    
+    You can adjust the splitting logic if you prefer a different approach (e.g., splitting on a word count or even based on rendered height on the client).
+    """
+    # Split the content using a paragraph end tag.
+    paragraphs = content.split('</p>')
+    pages = []
+    current_page = ""
+    
+    for para in paragraphs:
+        # Re-add the closing tag, since we removed it in the split.
+        if para.strip():
+            para = para.strip() + '</p>'
+        # If adding the new paragraph would exceed max_length then start a new page.
+        if len(current_page) + len(para) > max_length:
+            pages.append(current_page)
+            current_page = para
+        else:
+            current_page += para
+    if current_page:
+        pages.append(current_page)
+    return pages
+
 @app.route('/book-content/<path:filename>')
 def get_book_content(filename):
     if not allowed_file(filename):
@@ -783,8 +809,10 @@ def get_book_content(filename):
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
             soup = BeautifulSoup(item.get_content(), 'html.parser')
+            # Remove all style and link elements.
             for tag in soup.find_all(['style', 'link']):
                 tag.decompose()
+            # Update img tags to use the base64 data.
             for img in soup.find_all('img'):
                 src = img.get('src')
                 if src:
@@ -793,8 +821,15 @@ def get_book_content(filename):
                         img['src'] = image_map[basename]
                     elif src in image_map:
                         img['src'] = image_map[src]
+            # Use the body if it exists; otherwise, use the whole soup.
             content = str(soup.body) if soup.body else str(soup)
-            pages.append(html.unescape(content))
+            # Unescape the content.
+            unescaped_content = html.unescape(content)
+            
+            # Instead of appending a single page, split the content if it's too long.
+            # You can adjust the max_length value according to your needs.
+            split_pages = split_long_page(unescaped_content, max_length=1500)
+            pages.extend(split_pages)
     
     # Get the cover image using your helper function.
     cover_data = extract_cover(book_path)

@@ -544,6 +544,32 @@
                 bookmarkSidebar.style.display = 'none';
             }
         });
+        const bodyContainer = document.getElementById('reader-container');
+        // Add click event listener on the content div for left/right page-turning.
+        // const contentDiv = document.getElementById('content');
+        bodyContainer.addEventListener('click', function(event) {
+            // Determine the click position relative to the content div
+            const rect = bodyContainer.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            // If the click is within the left 50px...
+            if (clickX < 100) {
+                if (currentPage > 0) {
+                    currentPage--;
+                    displayCurrentPage();
+                }
+                event.stopPropagation();
+                return;
+            }
+            // If the click is within the right 50px...
+            if (clickX > rect.width - 50) {
+                if (book && currentPage < book.pages.length - 1) {
+                    currentPage++;
+                    displayCurrentPage();
+                }
+                event.stopPropagation();
+                return;
+            }
+        });
 
         loadBook();
     </script>
