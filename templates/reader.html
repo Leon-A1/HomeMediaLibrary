@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --bg-color: #1a1a1a;
+            --bg-color: #000000;
             --text-color: #e0e0e0;
         }
 
@@ -26,9 +26,9 @@
             flex: 1;
             overflow-y: auto;
             position: relative;
-            padding: 20px;
+            padding: 10px;
             /* Add space at the bottom so content isn't hidden behind fixed nav */
-            margin-bottom: 60px;
+            margin-bottom: 160px;
         }
 
         /* Ensure the reading content is on top */
@@ -92,7 +92,10 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background-color: rgba(0, 0, 0, 0.8);
+            /* background-color: rgba(255, 255, 255, 0.1); */
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            /* background-color: rgba(0, 0, 0, 0.8); */
+
             display: flex;
             justify-content: center;
             align-items: center;
@@ -277,6 +280,7 @@
                 document.getElementById('content').innerHTML = book.pages[currentPage];
                 document.getElementById('current-page').textContent = `Page ${currentPage + 1}`;
                 loadBookmarks(); // Re-highlight any bookmarks for this page
+                document.getElementById('content').scrollIntoView({ behavior: 'smooth' });
                 document.getElementById('content').scrollTop = 0;
             }
         }

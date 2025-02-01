@@ -6,7 +6,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23007bff'><path d='M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V4h2v8l2.5-1.5L13 12V4h5v16z'/></svg>"/>
     <style>
         :root {
-            --bg-color: #1a1a1a;
+            --bg-color: #000000;
             --card-bg: #2d2d2d;
             --text-color: #ffffff;
             --border-color: #404040;
@@ -52,8 +52,9 @@
         }
 
         .book-cover {
-            width: 150px;
-            height: 200px;
+            width: 100%;
+            height: 100%;
+            max-height: 500px;
             margin: 0 auto;
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -62,8 +63,11 @@
         }
 
         .placeholder-cover {
-            width: 150px;
-            height: 200px;
+            /* width: 150px; */
+            /* height: 200px; */
+            width: 100%;
+            height: 100%;
+            max-height: 500px;
             margin: 0 auto;
             display: flex;
             align-items: center;
@@ -136,8 +140,11 @@
             }
 
             .book-cover, .placeholder-cover {
-                width: 120px;
-                height: 160px;
+                /* width: 120px;
+                height: 160px; */
+                width: 100%;
+                height: 100%;
+                max-height: 500px;
             } 
         } 
 

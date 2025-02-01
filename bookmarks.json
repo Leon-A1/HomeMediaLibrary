@@ -1,16 +1,24 @@
 {
     "100 Books that Changed the Worlds.epub": [
         {
-            "page": 0,
-            "word": "Contents",
+            "page": 7,
+            "word": "Introduction",
             "occurrence": 1,
-            "timestamp": "2025-02-01T09:45:15.268530"
+            "timestamp": "2025-02-01T09:53:24.770643"
         },
         {
-            "page": 8,
-            "word": "I Ching",
+            "page": 9,
+            "word": "The Epic of Gilgamesh",
             "occurrence": 1,
-            "timestamp": "2025-02-01T09:45:42.690678"
+            "timestamp": "2025-02-01T09:54:24.406657"
+        }
+    ],
+    "The Power Of Now - Eckhart Tolle.epub": [
+        {
+            "page": 3,
+            "word": "before",
+            "occurrence": 4,
+            "timestamp": "2025-02-01T10:00:06.604432"
         }
     ]
 }
