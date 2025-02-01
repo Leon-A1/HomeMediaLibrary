@@ -3,22 +3,14 @@
         {
             "page": 0,
             "word": "Contents",
-            "timestamp": "2025-02-01T09:33:20.789768"
-        },
-        {
-            "page": 0,
-            "word": "Contents",
-            "timestamp": "2025-02-01T09:33:54.407694"
-        },
-        {
-            "page": 2,
-            "word": "world",
-            "timestamp": "2025-02-01T09:38:38.631309"
+            "occurrence": 1,
+            "timestamp": "2025-02-01T09:45:15.268530"
         },
         {
             "page": 8,
             "word": "I Ching",
-            "timestamp": "2025-02-01T09:40:57.967964"
+            "occurrence": 1,
+            "timestamp": "2025-02-01T09:45:42.690678"
         }
     ]
 }

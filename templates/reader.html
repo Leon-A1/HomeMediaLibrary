@@ -140,7 +140,121 @@
         const longPressDuration = 3000;
         let longPressTimer = null;
 
-        // Updated loadBook function to load last bookmark (if exists)
+        // Helper to get character offset of the selection within an element
+        function getCharacterOffsetWithin(element, range) {
+            let preCaretRange = range.cloneRange();
+            preCaretRange.selectNodeContents(element);
+            preCaretRange.setEnd(range.startContainer, range.startOffset);
+            return preCaretRange.toString().length;
+        }
+
+        // Helper to escape regex special characters
+        function escapeRegExp(string) {
+          return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Helper that replaces only the n-th occurrence of a word in a string
+        function replaceNthOccurrence(str, word, n, replacement) {
+            let index = -1;
+            for (let i = 0; i < n; i++) {
+                index = str.indexOf(word, index + 1);
+                if (index === -1) return str;
+            }
+            return str.substring(0, index) + replacement + str.substring(index + word.length);
+        }
+
+        // --- Updated Code for Bookmarking on Long Tap (3 seconds) ---
+        const contentDiv = document.getElementById('content');
+
+        function addBookmark(selectedText, selectionRange) {
+            // Compute the offset of the selection in the contentDiv
+            let offset = getCharacterOffsetWithin(contentDiv, selectionRange);
+            // Get the full plain text from contentDiv
+            let contentText = contentDiv.innerText;
+            // Count occurrences of the selected text BEFORE the offset
+            // This gives us the occurrence index (1-based) for this bookmark.
+            let occurrence = (contentText.substring(0, offset).match(new RegExp(escapeRegExp(selectedText), "g")) || []).length + 1;
+
+            // Wrap the selected text with a span that has the "bookmark" class
+            let span = document.createElement('span');
+            span.className = 'bookmark';
+            span.textContent = selectedText;
+            
+            // Replace the current selection with the new span
+            selectionRange.deleteContents();
+            selectionRange.insertNode(span);
+
+            // Immediately persist the bookmark to the server, including the occurrence
+            fetch('/bookmark', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    book: '{{ filename }}',
+                    page: currentPage,
+                    word: selectedText,
+                    occurrence: occurrence
+                })
+            })
+            .then(response => response.json())
+            .then(data => { console.log('Bookmark saved:', data); })
+            .catch(err => console.error(err));
+        }
+
+        // For mouse events (desktop)
+        contentDiv.addEventListener('mousedown', (event) => {
+            longPressTimer = setTimeout(() => {
+                let selection = window.getSelection();
+                if (selection && selection.toString().trim().length > 0) {
+                    const range = selection.getRangeAt(0);
+                    addBookmark(selection.toString(), range);
+                    selection.removeAllRanges();
+                }
+            }, longPressDuration);
+        });
+
+        contentDiv.addEventListener('mouseup', (event) => {
+            clearTimeout(longPressTimer);
+        });
+
+        // For touch devices (mobile)
+        contentDiv.addEventListener('touchstart', (event) => {
+            longPressTimer = setTimeout(() => {
+                let selection = window.getSelection();
+                if (selection && selection.toString().trim().length > 0) {
+                    const range = selection.getRangeAt(0);
+                    addBookmark(selection.toString(), range);
+                    selection.removeAllRanges();
+                }
+            }, longPressDuration);
+        });
+
+        contentDiv.addEventListener('touchend', (event) => {
+            clearTimeout(longPressTimer);
+        });
+        // --- End Updated Code for Bookmarking ---
+
+        // --- Update Load Bookmarks to Only Replace Specific Occurrence ---
+        async function loadBookmarks() {
+            try {
+                const response = await fetch(`/api/bookmarks?book={{ filename }}&page=${currentPage}`);
+                const bookmarks = await response.json();
+                if (bookmarks && bookmarks.length > 0) {
+                    let html = contentDiv.innerHTML;
+                    // For each bookmark, replace only the nth occurrence where n is stored in bm.occurrence.
+                    bookmarks.forEach(bm => {
+                        // Escape special characters in the bookmark word for a literal search.
+                        let escapedWord = escapeRegExp(bm.word);
+                        html = replaceNthOccurrence(html, bm.word, bm.occurrence, `<span class="bookmark">${bm.word}</span>`);
+                    });
+                    contentDiv.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading bookmarks:', error);
+            }
+        }
+        // --- End Load Bookmarks ---
+
+        // --- Existing Code for Loading the Book and Page Navigation ---
         async function loadBook() {
             const response = await fetch('{{ url_for("get_book_content", filename=filename) }}');
             book = await response.json();
@@ -186,88 +300,6 @@
             fontSize = fontSize === 1.2 ? 1.5 : fontSize === 1.5 ? 1.8 : 1.2;
             document.getElementById('content').style.fontSize = `${fontSize}em`;
         });
-
-        // --- Code for Bookmarking on Long Tap (3 seconds) ---
-        const contentDiv = document.getElementById('content');
-
-        function addBookmark(selectedText, selectionRange) {
-            // Wrap the selected text with a span that has the "bookmark" class
-            let span = document.createElement('span');
-            span.className = 'bookmark';
-            span.textContent = selectedText;
-            
-            // Replace the current selection with the new span
-            selectionRange.deleteContents();
-            selectionRange.insertNode(span);
-
-            // Immediately persist the bookmark to the server
-            fetch('/bookmark', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    book: '{{ filename }}',
-                    page: currentPage,
-                    word: selectedText
-                })
-            })
-            .then(response => response.json())
-            .then(data => { console.log('Bookmark saved:', data); })
-            .catch(err => console.error(err));
-        }
-
-        // For mouse events (desktop)
-        contentDiv.addEventListener('mousedown', (event) => {
-            longPressTimer = setTimeout(() => {
-                let selection = window.getSelection();
-                if (selection && selection.toString().trim().length > 0) {
-                    const range = selection.getRangeAt(0);
-                    addBookmark(selection.toString(), range);
-                    selection.removeAllRanges();
-                }
-            }, longPressDuration);
-        });
-
-        contentDiv.addEventListener('mouseup', (event) => {
-            clearTimeout(longPressTimer);
-        });
-
-        // For touch devices (mobile)
-        contentDiv.addEventListener('touchstart', (event) => {
-            longPressTimer = setTimeout(() => {
-                let selection = window.getSelection();
-                if (selection && selection.toString().trim().length > 0) {
-                    const range = selection.getRangeAt(0);
-                    addBookmark(selection.toString(), range);
-                    selection.removeAllRanges();
-                }
-            }, longPressDuration);
-        });
-
-        contentDiv.addEventListener('touchend', (event) => {
-            clearTimeout(longPressTimer);
-        });
-        // --- End Code for Bookmarking ---
-
-        // --- Load persistent bookmarks to re-highlight them ---
-        async function loadBookmarks() {
-            try {
-                const response = await fetch(`/api/bookmarks?book={{ filename }}&page=${currentPage}`);
-                const bookmarks = await response.json();
-                if (bookmarks && bookmarks.length > 0) {
-                    let html = contentDiv.innerHTML;
-                    // For each bookmark, wrap the word in a span (basic regex highlighting)
-                    bookmarks.forEach(bm => {
-                        let word = bm.word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                        let regex = new RegExp(`\\b${word}\\b`, 'g');
-                        html = html.replace(regex, `<span class="bookmark">${bm.word}</span>`);
-                    });
-                    contentDiv.innerHTML = html;
-                }
-            } catch (error) {
-                console.error('Error loading bookmarks:', error);
-            }
-        }
-        // --- End Load Bookmarks ---
 
         loadBook();
     </script>

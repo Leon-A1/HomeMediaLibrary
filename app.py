@@ -826,8 +826,9 @@ def add_bookmark():
     book = data.get('book')
     page = data.get('page')
     word = data.get('word')
-    
-    if not book or page is None or not word:
+    occurrence = data.get('occurrence')  # New field: which occurrence in the page
+
+    if not book or page is None or not word or occurrence is None:
         return jsonify({'success': False, 'message': 'Invalid data'}), 400
 
     bookmarks = load_bookmarks()
@@ -836,10 +837,11 @@ def add_bookmark():
     bookmarks[book].append({
         'page': page,
         'word': word,
+        'occurrence': occurrence,
         'timestamp': datetime.now().isoformat()
     })
     save_bookmarks(bookmarks)
-    return jsonify({'success': True, 'bookmark': {'page': page, 'word': word}})
+    return jsonify({'success': True, 'bookmark': {'page': page, 'word': word, 'occurrence': occurrence}})
 
 @app.route('/api/bookmarks')
 def api_bookmarks():
