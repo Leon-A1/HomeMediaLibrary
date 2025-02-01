@@ -13,6 +13,8 @@ import subprocess
 import queue
 import threading
 import yt_dlp
+from bs4 import BeautifulSoup
+import html
 
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
@@ -749,6 +751,37 @@ def get_music_folders():
         if os.path.isdir(os.path.join(MUSIC_DIR, item)) and item != 'Downloads':
             folders.append(item)
     return jsonify(folders)
+
+@app.route('/read/<path:filename>')
+def read_book(filename):
+    if not allowed_file(filename):
+        abort(404)
+    title = filename[:-5]  # remove .epub
+    return render_template('reader.html', filename=filename, title=title)
+
+@app.route('/book-content/<path:filename>')
+def get_book_content(filename):
+    if not allowed_file(filename):
+        abort(404)
+    
+    book_path = os.path.join(BOOK_DIR, filename)
+    book = epub.read_epub(book_path)
+    
+    pages = []
+    for item in book.get_items():
+        if item.get_type() == ebooklib.ITEM_DOCUMENT:
+            # Parse HTML content
+            soup = BeautifulSoup(item.get_content(), 'html.parser')
+            
+            # Remove existing styles
+            for tag in soup.find_all(['style', 'link']):
+                tag.decompose()
+            
+            # Clean up the HTML and add it to pages
+            content = str(soup.body) if soup.body else str(soup)
+            pages.append(html.unescape(content))
+    
+    return jsonify({'pages': pages})
 
 if __name__ == '__main__':
     print("Starting server...")

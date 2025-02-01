@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }} - Reader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: Arial, sans-serif;
+            height: 80vh;
+            overflow-y: auto;
+
+        }
+
+        #reader-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 50vh;
+        }
+
+        #content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            font-size: 1.2em;
+        }
+
+        .nav-area {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .nav-area:hover {
+            /* opacity: 0.1; */
+            /* background-color: white; */
+        }
+
+        #prev-page {
+            left: 0;
+        }
+
+        #next-page {
+            right: 0;
+        }
+
+        #toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #toolbar:hover {
+            opacity: 1;
+        }
+
+        .toolbar-button {
+            color: var(--text-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-size: 1.2em;
+        }
+
+        .toolbar-button:hover {
+            color: #007bff;
+        }
+
+        #page-info {
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <button class="toolbar-button" onclick="window.location.href='{{ url_for('books') }}'">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <span id="page-info">Page <span id="current-page">1</span></span>
+        <button class="toolbar-button" id="font-size-button">
+            <i class="fas fa-text-height"></i>
+        </button>
+    </div>
+
+    <div id="reader-container">
+        <div id="content"></div>
+        <div class="nav-area" id="prev-page"></div>
+        <div class="nav-area" id="next-page"></div>
+    </div>
+
+    <script>
+        let book = null;
+        let currentPage = 0;
+        let fontSize = 1.2;
+
+        async function loadBook() {
+            const response = await fetch('{{ url_for("get_book_content", filename=filename) }}');
+            book = await response.json();
+            displayCurrentPage();
+        }
+
+        function displayCurrentPage() {
+            if (book && book.pages) {
+                document.getElementById('content').innerHTML = book.pages[currentPage];
+                document.getElementById('current-page').textContent = currentPage + 1;
+            }
+        }
+
+        document.getElementById('prev-page').addEventListener('click', () => {
+            if (currentPage > 0) {
+                currentPage--;
+                displayCurrentPage();
+            }
+        });
+
+        document.getElementById('next-page').addEventListener('click', () => {
+            if (book && currentPage < book.pages.length - 1) {
+                currentPage++;
+                displayCurrentPage();
+            }
+        });
+
+        document.getElementById('font-size-button').addEventListener('click', () => {
+            fontSize = fontSize === 1.2 ? 1.5 : fontSize === 1.5 ? 1.8 : 1.2;
+            document.getElementById('content').style.fontSize = `${fontSize}em`;
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                document.getElementById('prev-page').click();
+            } else if (e.key === 'ArrowRight') {
+                document.getElementById('next-page').click();
+            }
+        });
+
+        loadBook();
+    </script>
+</body>
+</html> 
