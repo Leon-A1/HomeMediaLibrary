@@ -42,6 +42,9 @@
             font-size: 2em;
             padding: 10px;
             padding-top: 20px;
+            /* New styles to break long words */
+            word-wrap: break-word;
+            overflow-wrap: break-word;    
         }
         #content img {
             max-width: 100%;
@@ -49,7 +52,7 @@
 
         /* New style for bookmarks */
         .bookmark {
-            background-color: blue;
+            background-color: #007bff;
             color: white;
         }
 
@@ -113,7 +116,7 @@
         #bottom-nav span {
             font-size: 1.2em;
         }
-        /* New CSS for the fullscreen button in the bottom navbar */
+
         #fullscreen-button {
             position: absolute;
             right: 10px;
@@ -125,6 +128,18 @@
             font-size: 1.5em;
             cursor: pointer;
         }
+
+        /* Updated styling for book title to ensure long text wraps */
+        #book-title {
+            font-size: 0.85em;
+            padding: 0 10px;
+            font-weight: bold;
+            color: var(--text-color);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+            max-width: 60vw;
+        }
     </style>
 </head>
 <body>
@@ -132,6 +147,7 @@
         <button class="toolbar-button" onclick="window.location.href='{{ url_for('books') }}'">
             <i class="fas fa-arrow-left"></i> Back
         </button>
+        <span id="book-title">{{ title }}</span>
         <button class="toolbar-button" id="font-size-button">
             <i class="fas fa-text-height"></i>
         </button>
@@ -290,15 +306,14 @@
 
         function displayCurrentPage() {
             if (book && book.pages) {
-                // Set the content without markup from bookmarks
+                // Set the content for the current page
                 document.getElementById('content').innerHTML = book.pages[currentPage];
-                document.getElementById('current-page').textContent = `Page ${currentPage + 1}`;
-                loadBookmarks(); // Re-highlight any bookmarks for this page
+                // Update the current page information to include the total pages
+                document.getElementById('current-page').textContent = `Page  ${currentPage + 1} / ${book.pages.length}`;
+                // Re-highlight any bookmarks for this page
+                loadBookmarks();
+                // Scroll to the content smoothly
                 document.getElementById('content').scrollIntoView({ behavior: 'smooth' });
-                // document.getElementById('content').scrollTop = 0;
-
-                // scroll 20px down
-                // document.getElementById('content').scrollTop -= 20;
             }
         }
 
