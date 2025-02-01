@@ -30,21 +30,16 @@
             overflow-y: auto;
             position: relative;
             padding: 0px;
-            /* Add space at the bottom so content isn't hidden behind fixed nav */
-            margin-bottom: 60px;
+            margin-bottom: 100px;
         }
-
-        /* Ensure the reading content is on top */
         #content {
             position: relative;
             z-index: 2;
             max-width: 800px;
             margin: 0 auto;
-            line-height: 1;
+            line-height: 1.05;
             font-size: 2em;
             padding: 10px;
-            /* padding-top: 10px; */
-            /* New styles to break long words */
             word-wrap: break-word;
             overflow-wrap: break-word;    
         }
@@ -66,7 +61,7 @@
             top: 0;
             left: 0;
             right: 0;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.9);
             padding: 10px;
             display: flex;
             justify-content: space-between;
@@ -110,6 +105,7 @@
             align-items: center;
             padding: 10px;
             z-index: 4;
+            background-color: rgba(0, 0, 0, 0.9);
         }
         #bottom-nav button {
             background: none;
@@ -202,6 +198,12 @@
             left: 10px;
             top: 50%;
             transform: translateY(-50%);
+        }
+
+        @media (max-width: 768px) and (min-height: 768px) {
+            #content {
+            font-size: 1.5em;  
+        }
         }
     </style>
 </head>
@@ -570,6 +572,19 @@
                 event.stopPropagation();
                 return;
             }
+        });
+
+        // Trigger fullscreen mode on the first user click
+        document.addEventListener('click', function enableFullscreenOnFirstClick() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen()
+                    .then(() => {
+                        console.log("Entered fullscreen mode programmatically after user interaction");
+                    })
+                    .catch(err => console.error(`Error enabling fullscreen mode: ${err.message}`));
+            }
+            // Remove the listener so it only triggers once
+            document.removeEventListener('click', enableFullscreenOnFirstClick);
         });
 
         loadBook();
