@@ -4,6 +4,7 @@
     <title>{{ title }} - Reader</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
     <style>
         :root {
             --bg-color: #000000;
@@ -15,7 +16,7 @@
             padding: 0;
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
             height: 100vh;
             overflow: hidden;
             display: flex;
@@ -26,7 +27,7 @@
             flex: 1;
             overflow-y: auto;
             position: relative;
-            padding: 10px;
+            padding: 0px;
             /* Add space at the bottom so content isn't hidden behind fixed nav */
             margin-bottom: 160px;
         }
@@ -37,8 +38,10 @@
             z-index: 2;
             max-width: 800px;
             margin: 0 auto;
-            line-height: 1.6;
-            font-size: 1.2em;
+            line-height: 1;
+            font-size: 2em;
+            padding: 10px;
+            padding-top: 20px;
         }
         #content img {
             max-width: 100%;
@@ -281,7 +284,10 @@
                 document.getElementById('current-page').textContent = `Page ${currentPage + 1}`;
                 loadBookmarks(); // Re-highlight any bookmarks for this page
                 document.getElementById('content').scrollIntoView({ behavior: 'smooth' });
-                document.getElementById('content').scrollTop = 0;
+                // document.getElementById('content').scrollTop = 0;
+
+                // scroll 20px down
+                // document.getElementById('content').scrollTop -= 20;
             }
         }
 
