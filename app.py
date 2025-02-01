@@ -448,20 +448,51 @@ def get_locked():
     page = int(request.args.get('page', 1))
     per_page = 5
     media_type = request.args.get('type', 'all')
-    
+
+    all_items = []
     if media_type == 'photos':
-        items, total = get_paginated_files(LOCKED_DIR, ALLOWED_PHOTO_EXTENSIONS, page, per_page)
+        # Get only photo files and their dates
+        photo_files = [f for f in os.listdir(LOCKED_DIR)
+                       if f.lower().endswith(tuple(ALLOWED_PHOTO_EXTENSIONS))]
+        for f in photo_files:
+            file_path = os.path.join(LOCKED_DIR, f)
+            file_date = get_photo_date(file_path)
+            all_items.append({'filename': f, 'date': file_date, 'type': 'photo'})
     elif media_type == 'videos':
-        items, total = get_paginated_files(LOCKED_DIR, ALLOWED_VIDEO_EXTENSIONS, page, per_page)
+        # Get only video files and their dates
+        video_files = [f for f in os.listdir(LOCKED_DIR)
+                       if f.lower().endswith(tuple(ALLOWED_VIDEO_EXTENSIONS))]
+        for f in video_files:
+            file_path = os.path.join(LOCKED_DIR, f)
+            file_date = get_video_date(file_path)
+            all_items.append({'filename': f, 'date': file_date, 'type': 'video'})
     else:
-        photos, photos_total = get_paginated_files(LOCKED_DIR, ALLOWED_PHOTO_EXTENSIONS, page, per_page)
-        videos, videos_total = get_paginated_files(LOCKED_DIR, ALLOWED_VIDEO_EXTENSIONS, page, per_page)
-        items = photos + videos
-        total = photos_total + videos_total
-    
+        # Get both photos and videos
+        allowed_extensions = ALLOWED_PHOTO_EXTENSIONS.union(ALLOWED_VIDEO_EXTENSIONS)
+        files = [f for f in os.listdir(LOCKED_DIR)
+                 if f.lower().endswith(tuple(allowed_extensions))]
+        for f in files:
+            file_path = os.path.join(LOCKED_DIR, f)
+            if f.lower().endswith(tuple(ALLOWED_PHOTO_EXTENSIONS)):
+                file_date = get_photo_date(file_path)
+                file_type = 'photo'
+            else:
+                file_date = get_video_date(file_path)
+                file_type = 'video'
+            all_items.append({'filename': f, 'date': file_date, 'type': file_type})
+
+    # Sort all items by date in descending order (newest first)
+    all_items.sort(key=lambda x: x['date'], reverse=True)
+
+    total = len(all_items)
     start_idx = (page - 1) * per_page
-    has_more = (start_idx + len(items)) < total
+    end_idx = start_idx + per_page
+    paginated_items = all_items[start_idx:end_idx]
     
+    # Return only the filenames; the client uses the filename to build the media path
+    items = [item['filename'] for item in paginated_items]
+    has_more = end_idx < total
+
     return jsonify({
         'items': items,
         'hasMore': has_more,
