@@ -469,7 +469,7 @@
                 bookmarks.forEach(bm => {
                     const div = document.createElement('div');
                     div.className = 'bookmark-item';
-                    div.innerHTML = `Page: ${bm.page} | Word: ${bm.word} (occurrence: ${bm.occurrence})
+                    div.innerHTML = `Page: ${bm.page + 1} | Word: ${bm.word} (occurrence: ${bm.occurrence})
                       <span class="delete-bookmark" data-word="${bm.word}" data-occurrence="${bm.occurrence}" data-page="${bm.page}">&times;</span>`;
                     // Clicking anywhere on the item (other than delete) jumps to that page
                     div.addEventListener('click', () => {
