@@ -858,6 +858,26 @@ def get_last_bookmark():
             return jsonify({"page": 0})
     return jsonify({"page": 0})
 
+@app.route('/bookmark/delete', methods=['POST'])
+def delete_bookmark():
+    data = request.json
+    book = data.get('book')
+    page = data.get('page')
+    word = data.get('word')
+    occurrence = data.get('occurrence')
+    if not book or page is None or not word or occurrence is None:
+        return jsonify({'success': False, 'message': 'Invalid data'}), 400
+
+    bookmarks = load_bookmarks()
+    if book in bookmarks:
+        original_len = len(bookmarks[book])
+        bookmarks[book] = [bm for bm in bookmarks[book]
+                           if not (bm['page'] == page and bm['word'] == word and bm['occurrence'] == occurrence)]
+        if len(bookmarks[book]) < original_len:
+            save_bookmarks(bookmarks)
+            return jsonify({'success': True})
+    return jsonify({'success': False, 'message': 'Bookmark not found'}), 404
+
 if __name__ == '__main__':
     print("Starting server...")
     os.makedirs(BOOK_DIR, exist_ok=True)
