@@ -12,28 +12,31 @@
 
         body {
             margin: 0;
-            padding: 0px;
+            padding: 0;
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: Arial, sans-serif;
-            height: 80vh;
-            overflow-y: auto;
-
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         #reader-container {
+            flex: 1;
+            overflow-y: auto;
             position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 50vh;
+            padding: 20px;
+            /* Add space at the bottom so content isn't hidden behind fixed nav */
+            margin-bottom: 60px;
         }
 
+        /* Ensure the reading content is on top */
         #content {
+            position: relative;
+            z-index: 2;
             max-width: 800px;
-            width: 100%;
             margin: 0 auto;
-            padding: 20px;
             line-height: 1.6;
             font-size: 1.2em;
         }
@@ -41,30 +44,10 @@
             max-width: 100%;
         }
 
-        .nav-area {
-            position: absolute;
-            top: 0;
-            height: 100%;
-            width: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .nav-area:hover {
-            /* opacity: 0.1; */
-            /* background-color: white; */
-        }
-
-        #prev-page {
-            left: 0;
-        }
-
-        #next-page {
-            right: 0;
+        /* New style for bookmarks */
+        .bookmark {
+            background-color: blue;
+            color: white;
         }
 
         #toolbar {
@@ -79,6 +62,7 @@
             align-items: center;
             opacity: 0;
             transition: opacity 0.3s;
+            z-index: 3;
         }
 
         #toolbar:hover {
@@ -101,6 +85,31 @@
         #page-info {
             color: var(--text-color);
         }
+
+        /* Fixed bottom navigation bar for page turning */
+        #bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            z-index: 4;
+        }
+        #bottom-nav button {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0 20px;
+        }
+        #bottom-nav span {
+            font-size: 1.2em;
+        }
     </style>
 </head>
 <body>
@@ -108,7 +117,6 @@
         <button class="toolbar-button" onclick="window.location.href='{{ url_for('books') }}'">
             <i class="fas fa-arrow-left"></i> Back
         </button>
-        <span id="page-info">Page <span id="current-page">1</span></span>
         <button class="toolbar-button" id="font-size-button">
             <i class="fas fa-text-height"></i>
         </button>
@@ -116,29 +124,50 @@
 
     <div id="reader-container">
         <div id="content"></div>
-        <div class="nav-area" id="prev-page"></div>
-        <div class="nav-area" id="next-page"></div>
+    </div>
+
+    <div id="bottom-nav">
+        <button id="prev-page"><i class="fas fa-arrow-left"></i></button>
+        <span id="current-page">Page 1</span>
+        <button id="next-page"><i class="fas fa-arrow-right"></i></button>
     </div>
 
     <script>
         let book = null;
         let currentPage = 0;
         let fontSize = 1.2;
+        // Set long press threshold to 3000ms
+        const longPressDuration = 3000;
+        let longPressTimer = null;
 
+        // Updated loadBook function to load last bookmark (if exists)
         async function loadBook() {
             const response = await fetch('{{ url_for("get_book_content", filename=filename) }}');
             book = await response.json();
+            try {
+                const res = await fetch(`/api/bookmarks/last?book={{ filename }}`);
+                const data = await res.json();
+                // Only update currentPage if data.page is valid and within range
+                if (data && typeof data.page === 'number' && data.page < book.pages.length) {
+                    currentPage = data.page;
+                }
+            } catch (err) {
+                console.error(err);
+            }
             displayCurrentPage();
         }
 
         function displayCurrentPage() {
             if (book && book.pages) {
+                // Set the content without markup from bookmarks
                 document.getElementById('content').innerHTML = book.pages[currentPage];
-                document.getElementById('current-page').textContent = currentPage + 1;
-                document.getElementById('content').scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('current-page').textContent = `Page ${currentPage + 1}`;
+                loadBookmarks(); // Re-highlight any bookmarks for this page
+                document.getElementById('content').scrollTop = 0;
             }
         }
 
+        // Bottom navigation buttons
         document.getElementById('prev-page').addEventListener('click', () => {
             if (currentPage > 0) {
                 currentPage--;
@@ -158,14 +187,87 @@
             document.getElementById('content').style.fontSize = `${fontSize}em`;
         });
 
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') {
-                document.getElementById('prev-page').click();
-            } else if (e.key === 'ArrowRight') {
-                document.getElementById('next-page').click();
-            }
+        // --- Code for Bookmarking on Long Tap (3 seconds) ---
+        const contentDiv = document.getElementById('content');
+
+        function addBookmark(selectedText, selectionRange) {
+            // Wrap the selected text with a span that has the "bookmark" class
+            let span = document.createElement('span');
+            span.className = 'bookmark';
+            span.textContent = selectedText;
+            
+            // Replace the current selection with the new span
+            selectionRange.deleteContents();
+            selectionRange.insertNode(span);
+
+            // Immediately persist the bookmark to the server
+            fetch('/bookmark', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    book: '{{ filename }}',
+                    page: currentPage,
+                    word: selectedText
+                })
+            })
+            .then(response => response.json())
+            .then(data => { console.log('Bookmark saved:', data); })
+            .catch(err => console.error(err));
+        }
+
+        // For mouse events (desktop)
+        contentDiv.addEventListener('mousedown', (event) => {
+            longPressTimer = setTimeout(() => {
+                let selection = window.getSelection();
+                if (selection && selection.toString().trim().length > 0) {
+                    const range = selection.getRangeAt(0);
+                    addBookmark(selection.toString(), range);
+                    selection.removeAllRanges();
+                }
+            }, longPressDuration);
         });
+
+        contentDiv.addEventListener('mouseup', (event) => {
+            clearTimeout(longPressTimer);
+        });
+
+        // For touch devices (mobile)
+        contentDiv.addEventListener('touchstart', (event) => {
+            longPressTimer = setTimeout(() => {
+                let selection = window.getSelection();
+                if (selection && selection.toString().trim().length > 0) {
+                    const range = selection.getRangeAt(0);
+                    addBookmark(selection.toString(), range);
+                    selection.removeAllRanges();
+                }
+            }, longPressDuration);
+        });
+
+        contentDiv.addEventListener('touchend', (event) => {
+            clearTimeout(longPressTimer);
+        });
+        // --- End Code for Bookmarking ---
+
+        // --- Load persistent bookmarks to re-highlight them ---
+        async function loadBookmarks() {
+            try {
+                const response = await fetch(`/api/bookmarks?book={{ filename }}&page=${currentPage}`);
+                const bookmarks = await response.json();
+                if (bookmarks && bookmarks.length > 0) {
+                    let html = contentDiv.innerHTML;
+                    // For each bookmark, wrap the word in a span (basic regex highlighting)
+                    bookmarks.forEach(bm => {
+                        let word = bm.word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                        let regex = new RegExp(`\\b${word}\\b`, 'g');
+                        html = html.replace(regex, `<span class="bookmark">${bm.word}</span>`);
+                    });
+                    contentDiv.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading bookmarks:', error);
+            }
+        }
+        // --- End Load Bookmarks ---
 
         loadBook();
     </script>

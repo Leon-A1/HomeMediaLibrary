@@ -38,6 +38,9 @@ PASSWORD = "123"  # Locked will be hidden until a password is set
 download_progress = {}
 progress_queue = queue.Queue()
 
+# Add this near the top with other configuration variables
+BOOKMARKS_FILE = current_directory + "/bookmarks.json"
+
 def load_finished_books():
     if os.path.exists(FINISHED_BOOKS_FILE):
         with open(FINISHED_BOOKS_FILE, 'r') as f:
@@ -806,6 +809,61 @@ def get_book_content(filename):
             pages.append(html.unescape(content))
     
     return jsonify({'pages': pages})
+
+def load_bookmarks():
+    if os.path.exists(BOOKMARKS_FILE):
+        with open(BOOKMARKS_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_bookmarks(bookmarks):
+    with open(BOOKMARKS_FILE, 'w') as f:
+        json.dump(bookmarks, f, indent=4)
+
+@app.route('/bookmark', methods=['POST'])
+def add_bookmark():
+    data = request.json
+    book = data.get('book')
+    page = data.get('page')
+    word = data.get('word')
+    
+    if not book or page is None or not word:
+        return jsonify({'success': False, 'message': 'Invalid data'}), 400
+
+    bookmarks = load_bookmarks()
+    if book not in bookmarks:
+        bookmarks[book] = []
+    bookmarks[book].append({
+        'page': page,
+        'word': word,
+        'timestamp': datetime.now().isoformat()
+    })
+    save_bookmarks(bookmarks)
+    return jsonify({'success': True, 'bookmark': {'page': page, 'word': word}})
+
+@app.route('/api/bookmarks')
+def api_bookmarks():
+    book = request.args.get('book')
+    page = request.args.get('page')
+    bookmarks = load_bookmarks()
+    if book and page and book in bookmarks:
+        bookmarks_for_page = [bm for bm in bookmarks[book] if str(bm.get('page')) == str(page)]
+        return jsonify(bookmarks_for_page)
+    return jsonify([])
+
+@app.route('/api/bookmarks/last')
+def get_last_bookmark():
+    book_id = request.args.get('book')
+    bookmarks = load_bookmarks()
+    if book_id in bookmarks and bookmarks[book_id]:
+        try:
+            # Find the highest page number that has a bookmark.
+            last_page = max(bm['page'] for bm in bookmarks[book_id])
+            return jsonify({"page": last_page})
+        except Exception as e:
+            print("Error computing last bookmark:", e)
+            return jsonify({"page": 0})
+    return jsonify({"page": 0})
 
 if __name__ == '__main__':
     print("Starting server...")
