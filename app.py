@@ -1006,6 +1006,32 @@ def manifest():
     response.headers['Cache-Control'] = 'no-cache'
     return response
 
+@app.route('/delete_song', methods=['POST'])
+def delete_song():
+    data = request.get_json()
+    song = data.get('song')
+    if not song:
+        return jsonify({'success': False, 'message': 'No song provided'})
+    # Determine full file path using the song path (e.g., "Downloads/song.mp3" or "Folder/song.mp3")
+    parts = song.split('/', 1)
+    if len(parts) == 2:
+        folder, filename = parts
+        full_path = os.path.join(MUSIC_DIR, folder, filename)
+    else:
+        full_path = os.path.join(MUSIC_DIR, song)
+    full_path = os.path.abspath(full_path)
+    # Verify the file is inside MUSIC_DIR
+    if not full_path.startswith(os.path.abspath(MUSIC_DIR)):
+        return jsonify({'success': False, 'message': 'Invalid path'}), 400
+    if os.path.exists(full_path):
+        try:
+            os.remove(full_path)
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+    else:
+        return jsonify({'success': False, 'message': 'Song not found'}), 404
+
 if __name__ == '__main__':
     print("Starting server...")
     os.makedirs(BOOK_DIR, exist_ok=True)

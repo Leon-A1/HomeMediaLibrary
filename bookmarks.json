@@ -11,6 +11,58 @@
             "word": "don\u2019t",
             "occurrence": 1,
             "timestamp": "2025-02-01T19:05:49.893886"
+        },
+        {
+            "page": 23,
+            "word": "strokes",
+            "occurrence": 1,
+            "timestamp": "2025-02-01T19:45:15.657632"
+        },
+        {
+            "page": 27,
+            "word": "couple",
+            "occurrence": 1,
+            "timestamp": "2025-02-01T19:50:39.004781"
+        },
+        {
+            "page": 29,
+            "word": "Empathy",
+            "occurrence": 2,
+            "timestamp": "2025-02-02T06:39:18.892791"
+        },
+        {
+            "page": 31,
+            "word": "empathy",
+            "occurrence": 3,
+            "timestamp": "2025-02-02T06:43:06.486196"
+        },
+        {
+            "page": 32,
+            "word": "empathy",
+            "occurrence": 2,
+            "timestamp": "2025-02-02T06:48:28.745642"
+        },
+        {
+            "page": 32,
+            "word": "Here",
+            "occurrence": 1,
+            "timestamp": "2025-02-02T06:49:38.150798"
+        }
+    ],
+    "_OceanofPDF.com_The_Gifts_of_Imperfection_Let_Go_of_Who_You_Think_Youre_Supposed_to_Be_and_Embrace_Who_You_Are_-_Brene_Brown.epub": [
+        {
+            "page": 18,
+            "word": "heard",
+            "occurrence": 1,
+            "timestamp": "2025-02-02T07:05:30.857230"
+        }
+    ],
+    "Boundaries_ When to Say Yes, How to Say No to Take Control of Your Life ( PDFDrive ).epub": [
+        {
+            "page": 22,
+            "word": "4:30 P.M.",
+            "occurrence": 1,
+            "timestamp": "2025-02-02T07:18:44.831942"
         }
     ]
 }
