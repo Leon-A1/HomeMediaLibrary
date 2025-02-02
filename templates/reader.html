@@ -30,7 +30,7 @@
             overflow-y: auto;
             position: relative;
             padding: 0px;
-            margin-bottom: 100px;
+            margin-bottom: 3rem;
         }
         #content {
             position: relative;
@@ -440,14 +440,14 @@
                 document.documentElement.requestFullscreen()
                 .then(() => {
                     document.getElementById('fullscreen-button').innerHTML = '<i class="fas fa-compress"></i>';
-                    document.getElementById('reader-container').style.marginBottom = '55px';
+                    document.getElementById('reader-container').style.marginBottom = '3rem';
                 })
                 .catch(err => console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`));
             } else {
                 document.exitFullscreen()
                 .then(() => {
                     document.getElementById('fullscreen-button').innerHTML = '<i class="fas fa-expand"></i>';
-                    document.getElementById('reader-container').style.marginBottom = '60px';
+                    document.getElementById('reader-container').style.marginBottom = '3rem';
                 })
                 .catch(err => console.error(`Error attempting to disable full-screen mode: ${err.message} (${err.name})`));
             }
