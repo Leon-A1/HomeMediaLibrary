@@ -382,19 +382,16 @@
 
         // Modified loadBook function that assigns the data to the global 'book'
         async function loadBook() {
-            const response = await fetch('{{ url_for("get_book_content", filename=filename) }}');
-            // Assign the fetched data to the global book variable
+            // Use the tojson filter to safely embed the URL
+            const response = await fetch({{ url_for("get_book_content", filename=filename)|tojson }});
             book = await response.json();
 
-            // If the book data had a cover property, it would change the favicon,
-            // otherwise, set it to the default. Adjust this if your API returns a cover.
             if (book.cover && book.cover.trim() !== "") {
                 updateFavicon(book.cover);
             } else {
                 updateFavicon("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23007bff'><path d='M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V4h2v8l2.5-1.5L13 12V4h5v16z'/></svg>");
             }
 
-            // Get the last viewed page based on bookmarks.
             try {
                 const res = await fetch(`/api/bookmarks/last?book={{ filename }}`);
                 const data = await res.json();
