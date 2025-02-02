@@ -30,7 +30,7 @@
             overflow-y: auto;
             position: relative;
             padding: 0px;
-            margin-bottom: 3rem;
+            padding-bottom: 3rem;
         }
         #content {
             position: relative;
@@ -210,7 +210,7 @@
 <body>
     <div id="toolbar">
         <button class="toolbar-button" onclick="window.location.href='{{ url_for('books') }}'">
-            <i class="fas fa-arrow-left"></i> Back
+            <i class="fas fa-arrow-left"></i> 
         </button>
         <span id="book-title">{{ title }}</span>
         <button class="toolbar-button" id="font-size-button">
