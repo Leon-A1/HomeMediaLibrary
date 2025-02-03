@@ -6,13 +6,14 @@ import queue
 
 # Add this global variable at the top of the file
 progress_queue = queue.Queue()
-
+current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
+files_dir = current_directory + "/Files"
 
 def clean_music_downloads(folder="Downloads"):
     if not folder or folder == "Downloads":
-        downloads_directory = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Music/Downloads"
+        downloads_directory = files_dir + "/Music/Downloads"
     else:
-        downloads_directory = f"C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary/Music/{folder}"
+        downloads_directory = files_dir + "/Music/" + folder
     # Iterate through files in the directory
     for filename in os.listdir(downloads_directory):
 
@@ -34,7 +35,7 @@ def clean_music_downloads(folder="Downloads"):
 def download_from_youtube(url, format_type, download_id, folder='Downloads'):
     try:
         # Define base paths
-        base_path = "C:/Users/leona/Desktop/Code 2025/HomeMediaLibrary"
+        base_path = files_dir
         
         def progress_hook(d):
             if d['status'] == 'downloading':

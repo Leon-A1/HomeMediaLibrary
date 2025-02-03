@@ -20,18 +20,19 @@ current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/"
 
 app = Flask(__name__,template_folder= current_directory+"/templates")
 
-NOTEBOOK_DIR = current_directory + "/Notebook"
-MUSIC_DIR = current_directory+"/Music"
-MEDIA_DIR = current_directory+"/Photos&Videos"
-BOOK_DIR = current_directory+"/Books"  
-LOCKED_DIR = current_directory+"/Locked"
-SHUFFLED_DIR = current_directory + "/shuffled"
+files_dir = current_directory + "/Files"
+NOTEBOOK_DIR = files_dir + "/Notebook"
+MUSIC_DIR = files_dir + "/Music"
+MEDIA_DIR = files_dir + "/Photos&Videos"
+BOOK_DIR = files_dir + "/Books"  
+LOCKED_DIR = files_dir + "/Locked"
+SHUFFLED_DIR = files_dir + "/shuffled"
 
 # Configuration
 ALLOWED_EXTENSIONS = {'epub'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
-FINISHED_BOOKS_FILE = current_directory+"/finished_books.json"
+FINISHED_BOOKS_FILE = files_dir + "/finished_books.json"
 PASSWORD = "123"  # Locked will be hidden until a password is set
 
 # Add these global variables at the top of the file
@@ -39,7 +40,7 @@ download_progress = {}
 progress_queue = queue.Queue()
 
 # Add this near the top with other configuration variables
-BOOKMARKS_FILE = current_directory + "/bookmarks.json"
+BOOKMARKS_FILE = files_dir + "/bookmarks.json"
 
 def load_finished_books():
     if os.path.exists(FINISHED_BOOKS_FILE):
