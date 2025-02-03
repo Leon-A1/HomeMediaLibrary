@@ -519,8 +519,12 @@
             if (currentButton) {
                 currentButton.classList.add('playing');
             }
-            
-            audioSource.src = `/music/${song}`;
+
+            if(song.includes('/')){
+                audioSource.src = `/music/${song}`;
+            }else{
+                audioSource.src = `/music/Downloads/${song}`;
+            }
             audioPlayer.load();
             audioPlayer.play();
             
@@ -544,7 +548,7 @@
                         
                         const nextSong = songList[Math.floor(Math.random() * songList.length)];
                         const folder = folderSelector.value || 'Downloads';
-                        
+
                         fetch('/add_shuffled_song', {
                             method: 'POST',
                             headers: {

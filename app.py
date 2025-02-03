@@ -672,6 +672,7 @@ def download_from_youtube(url, format_type, download_id, folder):
     try:
         # Define base paths
         base_path = current_directory
+        files_dir = os.path.join(base_path, "files")
         
         def progress_hook(d):
             if d['status'] == 'downloading':
@@ -697,7 +698,7 @@ def download_from_youtube(url, format_type, download_id, folder):
         # Set output folder based on format type
         if format_type == "audio":
             downloads_folder = folder if folder else "Downloads"
-            output_folder = os.path.join(base_path, f"Music/{downloads_folder}")
+            output_folder = os.path.join(files_dir, f"Music/{downloads_folder}")
 
             output_template = f"{output_folder}/%(artist)s - %(title)s (%(upload_date>%Y)s).%(ext)s"
             ydl_opts = {
@@ -714,7 +715,7 @@ def download_from_youtube(url, format_type, download_id, folder):
                 'metadata-from-title': '(?P<artist>.+?) - (?P<title>.+)'
             }
         else:  # video
-            output_folder = os.path.join(base_path, "Photos&Videos/Downloads")
+            output_folder = os.path.join(files_dir, "Photos&Videos/Downloads")
             output_template = f"{output_folder}/%(title)s (%(upload_date>%Y)s).%(ext)s"
             ydl_opts = {
                 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
