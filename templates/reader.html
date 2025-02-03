@@ -31,6 +31,7 @@
             position: relative;
             padding: 0px;
             padding-bottom: 3rem;
+            margin-top: -1rem !important;
         }
         #content {
             position: relative;
@@ -42,6 +43,7 @@
             padding: 10px;
             word-wrap: break-word;
             overflow-wrap: break-word;    
+
         }
         #content a{
             color: #007bff;
@@ -233,7 +235,7 @@
         </div>
         <div id="bottom-nav-right" class="bottom-nav-section">
             <!-- <button id="next-page"><i class="fas fa-arrow-right"></i></button> -->
-            <span id="book-page">Page 1 / 1</span>
+            <span id="book-page">(1 / 1)</span>
             <button id="fullscreen-button"><i class="fas fa-expand"></i></button>
         </div>
     </div>
@@ -401,10 +403,11 @@
         // New helper to update both page indicators
         function updatePageIndicators() {
             // Update book page indicator (displayed on the right)
-            document.getElementById('book-page').textContent = `Page ${currentPage + 1} / ${book.pages.length}`;
+            document.getElementById('book-page').textContent = `(${currentPage + 1} / ${book.pages.length})`;
             // Update episode page indicator (displayed in the center)
             if (book.episodes) {
                 let sum = 0;
+
                 for (let i = 0; i < book.episodes.length; i++) {
                     let epLength = book.episodes[i].length;
                     if (currentPage < sum + epLength) {
@@ -422,11 +425,14 @@
         // Modified displayCurrentPage that now calls updatePageIndicators
         function displayCurrentPage() {
             if (book && book.pages) {
+                console.log(book.pages);
+                console.log(currentPage);
                 document.getElementById('content').innerHTML = book.pages[currentPage];
                 updatePageIndicators();
                 loadBookmarks();        
                 loadSidebarBookmarks();
                 document.getElementById('content').scrollIntoView({ behavior: 'smooth' });
+
             }
         }
 
@@ -478,7 +484,7 @@
                 bookmarks.forEach(bm => {
                     const div = document.createElement('div');
                     div.className = 'bookmark-item';
-                    div.innerHTML = `Page: ${bm.page + 1} | Word: ${bm.word} (occurrence: ${bm.occurrence})
+                    div.innerHTML = `Page: ${bm.page + 1} | ${bm.word} 
                       <span class="delete-bookmark" data-word="${bm.word}" data-occurrence="${bm.occurrence}" data-page="${bm.page}">&times;</span>`;
                     div.addEventListener('click', () => {
                         currentPage = bm.page;

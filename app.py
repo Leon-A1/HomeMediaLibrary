@@ -819,7 +819,7 @@ def read_book(filename):
     title = filename[:-5]  # remove .epub
     return render_template('reader.html', filename=filename, title=title)
 
-def split_long_page(content, max_length=1500):
+def split_long_page(content, max_length=1600):
     """
     Splits a long HTML content string into multiple pages.
     This example splits based on paragraph breaks (</p>) and ensures that each chunk doesn't exceed max_length characters.
@@ -827,14 +827,14 @@ def split_long_page(content, max_length=1500):
     You can adjust the splitting logic if you prefer a different approach (e.g., splitting on a word count or even based on rendered height on the client).
     """
     # Split the content using a paragraph end tag.
-    paragraphs = content.split('</p>')
+    paragraphs = content.split('\n')
     pages = []
     current_page = ""
     
     for para in paragraphs:
         # Re-add the closing tag, since we removed it in the split.
         if para.strip():
-            para = para.strip() + '</p>'
+            para = para.strip() + '\n'
         # If adding the new paragraph would exceed max_length then start a new page.
         if len(current_page) + len(para) > max_length:
             pages.append(current_page)
@@ -863,7 +863,7 @@ def get_book_content(filename):
             image_map[os.path.basename(item.get_name())] = f"data:image/{ext};base64,{image_data}"
     
     pages = []
-    episodes = []  # New list to group pages by document (episode)
+    episodes = []  # Group pages by document (episode)
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
             soup = BeautifulSoup(item.get_content(), 'html.parser')
@@ -882,8 +882,8 @@ def get_book_content(filename):
             content = str(soup.body) if soup.body else str(soup)
             unescaped_content = html.unescape(content)
             
-            # Split long content into pages and record these as one episode
-            split_pages = split_long_page(unescaped_content, max_length=1500)
+            # Increase max_length to 3000 so that each page holds more content / fills more of the screen.
+            split_pages = split_long_page(unescaped_content)
             episodes.append(split_pages)
             pages.extend(split_pages)
     
