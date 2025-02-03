@@ -93,7 +93,7 @@
             color: var(--text-color);
         }
 
-        /* Fixed bottom navigation bar for page turning */
+        /* Bottom navigation bar now split into three sections */
         #bottom-nav {
             position: fixed;
             bottom: 0;
@@ -101,36 +101,38 @@
             right: 0;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
             display: flex;
-            justify-content: center;
             align-items: center;
             padding: 10px;
             z-index: 4;
             background-color: rgba(0, 0, 0, 0.9);
         }
+        .bottom-nav-section {
+            display: flex;
+            align-items: center;
+        }
+        #bottom-nav-left {
+            flex: 0 0 auto;
+        }
+        #bottom-nav-center {
+            flex: 1;
+            justify-content: center;
+            text-align: center;
+        }
+        #bottom-nav-right {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        /* Style for bottom-nav buttons */
         #bottom-nav button {
             background: none;
             border: none;
             color: var(--text-color);
             font-size: 1.5em;
             cursor: pointer;
-            padding: 0 20px;
+            padding: 0 10px;
         }
-        #bottom-nav span {
-            font-size: 1.2em;
-        }
-
-        #fullscreen-button {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: var(--text-color);
-            font-size: 1.5em;
-            cursor: pointer;
-        }
-
         /* Updated styling for book title to ensure long text wraps */
         #book-title {
             font-size: 0.85em;
@@ -145,7 +147,7 @@
             text-align: center;
         }
 
-        /* Add style for the bookmarks sidebar */
+        /* Styles for the bookmarks sidebar */
         #bookmark-sidebar {
             display: none; /* Hide sidebar by default */
             position: fixed;
@@ -160,7 +162,7 @@
             z-index: 5;
             border-right: 1px solid #555;
         }
-        /* Style for the close button */
+        /* Close button style */
         #bookmark-sidebar .close-btn {
             position: absolute;
             top: 5px;
@@ -180,7 +182,6 @@
             border-bottom: 1px solid #555;
             cursor: pointer;
             position: relative;
-            /* make the bookmark item text not to overflow with the close button */
             max-width: 275px;
             padding-right: 20px;
         }
@@ -191,8 +192,7 @@
             color: red;
             cursor: pointer;
         }
-
-        /* Add this CSS rule to position the bookmark toggle to the left side */
+        /* Positioning for the bookmark toggle button */
         #bookmark-toggle {
             position: absolute;
             left: 10px;
@@ -202,8 +202,8 @@
 
         @media (max-width: 768px) and (min-height: 768px) {
             #content {
-            font-size: 1.5em;  
-        }
+                font-size: 1.5em;  
+            }
         }
     </style>
 </head>
@@ -222,15 +222,20 @@
         <div id="content"></div>
     </div>
 
+    <!-- Updated bottom navigation with three sections -->
     <div id="bottom-nav">
-        <!-- New bookmarks toggle button -->
-        <button id="bookmark-toggle"><i class="fas fa-bookmark"></i></button>
-
-        <button id="prev-page"><i class="fas fa-arrow-left"></i></button>
-        <span id="current-page">Page 1</span>
-        <button id="next-page"><i class="fas fa-arrow-right"></i></button>
-        <!-- New fullscreen toggle button -->
-        <button id="fullscreen-button"><i class="fas fa-expand"></i></button>
+        <div id="bottom-nav-left" class="bottom-nav-section">
+            <button id="bookmark-toggle"><i class="fas fa-bookmark"></i></button>
+            <!-- <button id="prev-page"><i class="fas fa-arrow-left"></i></button> -->
+        </div>
+        <div id="bottom-nav-center" class="bottom-nav-section">
+            <span id="episode-page">Chapter 1: Page 1 / 1</span>
+        </div>
+        <div id="bottom-nav-right" class="bottom-nav-section">
+            <!-- <button id="next-page"><i class="fas fa-arrow-right"></i></button> -->
+            <span id="book-page">Page 1 / 1</span>
+            <button id="fullscreen-button"><i class="fas fa-expand"></i></button>
+        </div>
     </div>
 
     <div id="bookmark-sidebar">
@@ -281,19 +286,15 @@
             // Get the full plain text from contentDiv
             let contentText = contentDiv.innerText;
             // Count occurrences of the selected text BEFORE the offset
-            // This gives us the occurrence index (1-based) for this bookmark.
             let occurrence = (contentText.substring(0, offset).match(new RegExp(escapeRegExp(selectedText), "g")) || []).length + 1;
 
-            // Wrap the selected text with a span that has the "bookmark" class
             let span = document.createElement('span');
             span.className = 'bookmark';
             span.textContent = selectedText;
             
-            // Replace the current selection with the new span
             selectionRange.deleteContents();
             selectionRange.insertNode(span);
 
-            // Immediately persist the bookmark to the server, including the occurrence
             fetch('/bookmark', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -307,14 +308,12 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Bookmark saved:', data);
-                // Update both inline and sidebar bookmarks
                 loadBookmarks();
                 loadSidebarBookmarks();
             })
             .catch(err => console.error(err));
         }
 
-        // For mouse events (desktop)
         contentDiv.addEventListener('mousedown', (event) => {
             longPressTimer = setTimeout(() => {
                 let selection = window.getSelection();
@@ -330,7 +329,6 @@
             clearTimeout(longPressTimer);
         });
 
-        // For touch devices (mobile)
         contentDiv.addEventListener('touchstart', (event) => {
             longPressTimer = setTimeout(() => {
                 let selection = window.getSelection();
@@ -354,9 +352,7 @@
                 const bookmarks = await response.json();
                 if (bookmarks && bookmarks.length > 0) {
                     let html = contentDiv.innerHTML;
-                    // For each bookmark, replace only the nth occurrence where n is stored in bm.occurrence.
                     bookmarks.forEach(bm => {
-                        // Escape special characters in the bookmark word for a literal search.
                         let escapedWord = escapeRegExp(bm.word);
                         html = replaceNthOccurrence(html, bm.word, bm.occurrence, `<span class="bookmark">${bm.word}</span>`);
                     });
@@ -368,7 +364,6 @@
         }
         // --- End Load Bookmarks ---
 
-        // Helper function to update the favicon
         function updateFavicon(url) {
             let faviconTag = document.getElementById('favicon');
             if (!faviconTag) {
@@ -382,7 +377,6 @@
 
         // Modified loadBook function that assigns the data to the global 'book'
         async function loadBook() {
-            // Use the tojson filter to safely embed the URL
             const response = await fetch({{ url_for("get_book_content", filename=filename)|tojson }});
             book = await response.json();
 
@@ -404,37 +398,58 @@
             displayCurrentPage();
         }
 
+        // New helper to update both page indicators
+        function updatePageIndicators() {
+            // Update book page indicator (displayed on the right)
+            document.getElementById('book-page').textContent = `Page ${currentPage + 1} / ${book.pages.length}`;
+            // Update episode page indicator (displayed in the center)
+            if (book.episodes) {
+                let sum = 0;
+                for (let i = 0; i < book.episodes.length; i++) {
+                    let epLength = book.episodes[i].length;
+                    if (currentPage < sum + epLength) {
+                        let currentEpisodePage = currentPage - sum;
+                        document.getElementById('episode-page').textContent = `Chapter ${i - 1}: Page ${currentEpisodePage + 1} / ${epLength}`;
+                        break;
+                    }
+                    sum += epLength;
+                }
+            } else {
+                document.getElementById('episode-page').textContent = `Page ${currentPage - 1} / ${book.pages.length}`;
+            }
+        }
+
+        // Modified displayCurrentPage that now calls updatePageIndicators
         function displayCurrentPage() {
             if (book && book.pages) {
                 document.getElementById('content').innerHTML = book.pages[currentPage];
-                document.getElementById('current-page').textContent = `Page  ${currentPage + 1} / ${book.pages.length}`;
-                loadBookmarks();        // reload inline bookmarks
-                loadSidebarBookmarks(); // load bookmarks in the sidebar
+                updatePageIndicators();
+                loadBookmarks();        
+                loadSidebarBookmarks();
                 document.getElementById('content').scrollIntoView({ behavior: 'smooth' });
             }
         }
 
-        // Bottom navigation buttons
-        document.getElementById('prev-page').addEventListener('click', () => {
-            if (currentPage > 0) {
-                currentPage--;
-                displayCurrentPage();
-            }
-        });
+        // Bottom navigation button events
+        // document.getElementById('prev-page').addEventListener('click', () => {
+        //     if (currentPage > 0) {
+        //         currentPage--;
+        //         displayCurrentPage();
+        //     }
+        // });
 
-        document.getElementById('next-page').addEventListener('click', () => {
-            if (book && currentPage < book.pages.length - 1) {
-                currentPage++;
-                displayCurrentPage();
-            }
-        });
+        // document.getElementById('next-page').addEventListener('click', () => {
+        //     if (book && currentPage < book.pages.length - 1) {
+        //         currentPage++;
+        //         displayCurrentPage();
+        //     }
+        // });
 
         document.getElementById('font-size-button').addEventListener('click', () => {
             fontSize = fontSize === 1.2 ? 1.5 : fontSize === 1.5 ? 1.8 : 1.2;
             document.getElementById('content').style.fontSize = `${fontSize}em`;
         });
 
-        // New event listener for the fullscreen button
         document.getElementById('fullscreen-button').addEventListener('click', () => {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen()
@@ -453,24 +468,20 @@
             }
         });
 
-        // Function to load all bookmarks for the current book into the sidebar
         async function loadSidebarBookmarks() {
             try {
-                // Note: we are no longer filtering by currentPage here.
                 const response = await fetch(`/api/bookmarks?book={{ filename }}`);
                 const bookmarks = await response.json();
                 const bookmarkList = document.getElementById('bookmark-list');
                 bookmarkList.innerHTML = '';
-                // Optionally, sort bookmarks by page number for easier navigation
                 bookmarks.sort((a, b) => parseInt(a.page) - parseInt(b.page));
                 bookmarks.forEach(bm => {
                     const div = document.createElement('div');
                     div.className = 'bookmark-item';
                     div.innerHTML = `Page: ${bm.page + 1} | Word: ${bm.word} (occurrence: ${bm.occurrence})
                       <span class="delete-bookmark" data-word="${bm.word}" data-occurrence="${bm.occurrence}" data-page="${bm.page}">&times;</span>`;
-                    // Clicking anywhere on the item (other than delete) jumps to that page
                     div.addEventListener('click', () => {
-                        currentPage = bm.page; // Jump to the bookmarked page
+                        currentPage = bm.page;
                         displayCurrentPage();
                     });
                     bookmarkList.appendChild(div);
@@ -480,7 +491,6 @@
             }
         }
 
-        // Add an event listener on the sidebar list to handle bookmark deletion
         document.getElementById('bookmark-list').addEventListener('click', async (event) => {
             if (event.target.classList.contains('delete-bookmark')) {
                 event.stopPropagation();
@@ -500,7 +510,6 @@
                     });
                     const data = await response.json();
                     if (data.success) {
-                        // Reload the sidebar and the inline bookmarks after deletion
                         loadSidebarBookmarks();
                         loadBookmarks();
                     } else {
@@ -512,7 +521,6 @@
             }
         });
 
-        // Toggle the bookmarks sidebar visibility using the bottom navbar button.
         const bookmarkToggleButton = document.getElementById('bookmark-toggle');
         const bookmarkSidebar = document.getElementById('bookmark-sidebar');
 
@@ -524,18 +532,14 @@
             }
         });
 
-        // Add event listener for the close button in the sidebar.
         const bookmarkCloseButton = document.getElementById('bookmark-close-button');
         bookmarkCloseButton.addEventListener('click', () => {
             bookmarkSidebar.style.display = 'none';
         });
 
-        // Add an event listener to close the bookmarks sidebar when clicking outside of it
         document.addEventListener('click', function(event) {
             const bookmarkSidebar = document.getElementById('bookmark-sidebar');
             const bookmarkToggleButton = document.getElementById('bookmark-toggle');
-
-            // If the sidebar is visible and the click target is not within the sidebar or on the toggle button, close it.
             if (bookmarkSidebar.style.display === 'block' &&
                 !bookmarkSidebar.contains(event.target) &&
                 event.target !== bookmarkToggleButton &&
@@ -545,13 +549,9 @@
             }
         });
         const bodyContainer = document.getElementById('reader-container');
-        // Add click event listener on the content div for left/right page-turning.
-        // const contentDiv = document.getElementById('content');
         bodyContainer.addEventListener('click', function(event) {
-            // Determine the click position relative to the content div
             const rect = bodyContainer.getBoundingClientRect();
             const clickX = event.clientX - rect.left;
-            // If the click is within the left 50px...
             if (clickX < 100) {
                 if (currentPage > 0) {
                     currentPage--;
@@ -560,7 +560,6 @@
                 event.stopPropagation();
                 return;
             }
-            // If the click is within the right 50px...
             if (clickX > rect.width - 50) {
                 if (book && currentPage < book.pages.length - 1) {
                     currentPage++;
@@ -571,7 +570,6 @@
             }
         });
 
-        // Trigger fullscreen mode on the first user click
         document.addEventListener('click', function enableFullscreenOnFirstClick() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen()
@@ -580,7 +578,6 @@
                     })
                     .catch(err => console.error(`Error enabling fullscreen mode: ${err.message}`));
             }
-            // Remove the listener so it only triggers once
             document.removeEventListener('click', enableFullscreenOnFirstClick);
         });
 

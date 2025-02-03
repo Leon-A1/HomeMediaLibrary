@@ -853,7 +853,7 @@ def get_book_content(filename):
     book_path = os.path.join(BOOK_DIR, filename)
     book = epub.read_epub(book_path)
     
-    # Prepare a map of images (this part already exists)
+    # Prepare a map of images
     image_map = {}
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_IMAGE:
@@ -863,13 +863,14 @@ def get_book_content(filename):
             image_map[os.path.basename(item.get_name())] = f"data:image/{ext};base64,{image_data}"
     
     pages = []
+    episodes = []  # New list to group pages by document (episode)
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
             soup = BeautifulSoup(item.get_content(), 'html.parser')
-            # Remove all style and link elements.
+            # Remove style and link elements
             for tag in soup.find_all(['style', 'link']):
                 tag.decompose()
-            # Update img tags to use the base64 data.
+            # Update img tags to use base64 data
             for img in soup.find_all('img'):
                 src = img.get('src')
                 if src:
@@ -878,20 +879,17 @@ def get_book_content(filename):
                         img['src'] = image_map[basename]
                     elif src in image_map:
                         img['src'] = image_map[src]
-            # Use the body if it exists; otherwise, use the whole soup.
             content = str(soup.body) if soup.body else str(soup)
-            # Unescape the content.
             unescaped_content = html.unescape(content)
             
-            # Instead of appending a single page, split the content if it's too long.
-            # You can adjust the max_length value according to your needs.
+            # Split long content into pages and record these as one episode
             split_pages = split_long_page(unescaped_content, max_length=1500)
+            episodes.append(split_pages)
             pages.extend(split_pages)
     
-    # Get the cover image using your helper function.
     cover_data = extract_cover(book_path)
     
-    return jsonify({'pages': pages, 'cover': cover_data})
+    return jsonify({'pages': pages, 'cover': cover_data, 'episodes': episodes})
 
 def load_bookmarks():
     if os.path.exists(BOOKMARKS_FILE):
