@@ -1032,6 +1032,61 @@ def delete_song():
     else:
         return jsonify({'success': False, 'message': 'Song not found'}), 404
 
+@app.route('/uploader')
+def uploader():
+    return render_template('uploader.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'No file part'})
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': 'No file selected'})
+    
+    folder = request.form.get('folder', '')
+    
+    # Determine file extension and check if it's allowed
+    extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+    
+    # Automatically detect file type based on extension
+    if extension in ALLOWED_PHOTO_EXTENSIONS:
+        file_type = 'photo'
+    elif extension in ALLOWED_VIDEO_EXTENSIONS:
+        file_type = 'video'
+    else:
+        allowed_extensions = list(ALLOWED_PHOTO_EXTENSIONS) + list(ALLOWED_VIDEO_EXTENSIONS)
+        return jsonify({'success': False, 'message': f'File type not allowed. Allowed types: {", ".join(allowed_extensions)}'})
+    
+    # Determine the target directory
+    if folder:
+        target_dir = os.path.join(MEDIA_DIR, folder)
+    else:
+        target_dir = MEDIA_DIR
+    
+    # Create directory if it doesn't exist
+    os.makedirs(target_dir, exist_ok=True)
+    
+    # Save the file
+    file_path = os.path.join(target_dir, file.filename)
+    file.save(file_path)
+    
+    return jsonify({'success': True, 'message': f'File uploaded successfully as {file_type}'})
+
+@app.route('/api/folders')
+def get_media_folders():
+    folders = []
+    
+    # Get all folders in the media directory
+    for root, dirs, _ in os.walk(MEDIA_DIR):
+        for dir_name in dirs:
+            # Get the relative path from MEDIA_DIR
+            rel_path = os.path.relpath(os.path.join(root, dir_name), MEDIA_DIR)
+            folders.append(rel_path)
+    
+    return jsonify(folders)
+
 if __name__ == '__main__':
     print("Starting server...")
     os.makedirs(BOOK_DIR, exist_ok=True)

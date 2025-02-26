@@ -1,3 +1,4 @@
 flask
 ebooklib
 Pillow
+yt_dlp
