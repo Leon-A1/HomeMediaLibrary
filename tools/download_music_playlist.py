@@ -7,9 +7,13 @@ import queue
 # Add this global variable at the top of the file
 progress_queue = queue.Queue()
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
+## go up one directory
+current_directory = os.path.dirname(current_directory)
+
 files_dir = current_directory + "/Files"
 
 def clean_music_downloads(folder="Downloads"):
+    print(files_dir)
     if not folder or folder == "Downloads":
         downloads_directory = files_dir + "/Music/Downloads"
     else:
@@ -112,4 +116,4 @@ def download_from_youtube(url, format_type, download_id, folder='Downloads'):
 
 
 if __name__ == "__main__":
-    clean_music_downloads("Hebrew")
+    clean_music_downloads("Rap")
