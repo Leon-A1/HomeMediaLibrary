@@ -31,7 +31,7 @@
             position: relative;
             padding: 0px;
             padding-bottom: 3rem;
-            margin-top: -1rem !important;
+            margin-top: 0rem !important;
         }
         #content {
             position: relative;
@@ -231,7 +231,7 @@
             <!-- <button id="prev-page"><i class="fas fa-arrow-left"></i></button> -->
         </div>
         <div id="bottom-nav-center" class="bottom-nav-section">
-            <span id="episode-page">Chapter 1: Page 1 / 1</span>
+            <span id="episode-page">Chapter 1:  1 / 1</span>
         </div>
         <div id="bottom-nav-right" class="bottom-nav-section">
             <!-- <button id="next-page"><i class="fas fa-arrow-right"></i></button> -->
@@ -412,13 +412,13 @@
                     let epLength = book.episodes[i].length;
                     if (currentPage < sum + epLength) {
                         let currentEpisodePage = currentPage - sum;
-                        document.getElementById('episode-page').textContent = `Chapter ${i - 1}: Page ${currentEpisodePage + 1} / ${epLength}`;
+                        document.getElementById('episode-page').textContent = `Chapter ${i - 1}:  ${currentEpisodePage + 1} / ${epLength}`;
                         break;
                     }
                     sum += epLength;
                 }
             } else {
-                document.getElementById('episode-page').textContent = `Page ${currentPage - 1} / ${book.pages.length}`;
+                document.getElementById('episode-page').textContent = ` ${currentPage - 1} / ${book.pages.length}`;
             }
         }
 

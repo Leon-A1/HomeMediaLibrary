@@ -819,7 +819,7 @@ def read_book(filename):
     title = filename[:-5]  # remove .epub
     return render_template('reader.html', filename=filename, title=title)
 
-def split_long_page(content, max_length=1600):
+def split_long_page(content, max_length=1100):
     """
     Splits a long HTML content string into multiple pages.
     This example splits based on paragraph breaks (</p>) and ensures that each chunk doesn't exceed max_length characters.
@@ -827,14 +827,14 @@ def split_long_page(content, max_length=1600):
     You can adjust the splitting logic if you prefer a different approach (e.g., splitting on a word count or even based on rendered height on the client).
     """
     # Split the content using a paragraph end tag.
-    paragraphs = content.split('\n')
+    paragraphs = content.split(' ')
     pages = []
     current_page = ""
     
     for para in paragraphs:
         # Re-add the closing tag, since we removed it in the split.
         if para.strip():
-            para = para.strip() + '\n'
+            para = para.strip() + ' '
         # If adding the new paragraph would exceed max_length then start a new page.
         if len(current_page) + len(para) > max_length:
             pages.append(current_page)
@@ -1041,4 +1041,4 @@ if __name__ == '__main__':
     os.makedirs(SHUFFLED_DIR, exist_ok=True)
     os.makedirs(NOTEBOOK_DIR, exist_ok=True)
     # Set the host to 0.0.0.0 to make the server accessible from other devices on the network
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=3000)
