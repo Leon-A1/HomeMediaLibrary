@@ -93,9 +93,17 @@
             cursor: pointer;
         }
 
-        .selected-file {
+        .selected-files {
             margin-top: 10px;
-            font-style: italic;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 5px;
+        }
+
+        .file-item {
+            margin-bottom: 5px;
             word-break: break-all;
         }
 
@@ -198,6 +206,32 @@
         .folder-input-container button:hover {
             background-color: #444;
         }
+
+        .results-container {
+            margin-top: 20px;
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #333;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .result-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .result-success {
+            background-color: rgba(0, 128, 0, 0.2);
+        }
+
+        .result-error {
+            background-color: rgba(255, 0, 0, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -221,14 +255,16 @@
             <div class="form-group">
                 <div class="file-input-container">
                     <label for="file" class="file-input-label">
-                        <i class="fas fa-cloud-upload-alt"></i> Choose File
+                        <i class="fas fa-cloud-upload-alt"></i> Choose Files
                     </label>
-                    <input type="file" id="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.mp4,.avi,.mov,.mkv">
+                    <input type="file" id="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.mp4,.avi,.mov,.mkv" multiple>
                 </div>
-                <div class="selected-file" id="selected-file">No file selected</div>
+                <div class="selected-files" id="selected-files" style="display: none;">
+                    <!-- Selected files will be listed here -->
+                </div>
             </div>
             
-            <button id="upload-btn" class="upload-btn" disabled>Upload</button>
+            <button id="upload-btn" class="upload-btn" disabled>Upload Files</button>
             
             <div class="progress-container" id="progress-container">
                 <div class="progress-bar">
@@ -238,6 +274,10 @@
             </div>
             
             <div id="message" class="message" style="display: none;"></div>
+            
+            <div class="results-container" id="results-container">
+                <!-- Upload results will be shown here -->
+            </div>
         </div>
     </div>
 
@@ -246,50 +286,65 @@
         const folderSelect = document.getElementById('folder');
         const refreshFoldersBtn = document.getElementById('refresh-folders');
         const fileInput = document.getElementById('file');
-        const selectedFileText = document.getElementById('selected-file');
+        const selectedFilesContainer = document.getElementById('selected-files');
         const uploadBtn = document.getElementById('upload-btn');
         const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress');
         const statusText = document.getElementById('status');
         const messageDiv = document.getElementById('message');
+        const resultsContainer = document.getElementById('results-container');
 
         // Load folders when page loads
         loadFolders();
 
         // Event listeners
         fileInput.addEventListener('change', handleFileSelect);
-        uploadBtn.addEventListener('click', uploadFile);
+        uploadBtn.addEventListener('click', uploadFiles);
         refreshFoldersBtn.addEventListener('click', loadFolders);
 
         // Functions
         function handleFileSelect() {
-            const file = fileInput.files[0];
-            if (file) {
-                selectedFileText.textContent = file.name;
+            const files = fileInput.files;
+            if (files.length > 0) {
+                selectedFilesContainer.innerHTML = '';
+                selectedFilesContainer.style.display = 'block';
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.textContent = file.name;
+                    selectedFilesContainer.appendChild(fileItem);
+                }
+                
                 uploadBtn.disabled = false;
                 hideMessage();
             } else {
-                selectedFileText.textContent = 'No file selected';
+                selectedFilesContainer.style.display = 'none';
                 uploadBtn.disabled = true;
             }
         }
 
-        function uploadFile() {
-            const file = fileInput.files[0];
-            if (!file) return;
+        function uploadFiles() {
+            const files = fileInput.files;
+            if (files.length === 0) return;
             
             const folder = folderSelect.value;
             
             // Create FormData
             const formData = new FormData();
-            formData.append('file', file);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('file', files[i]);
+            }
             formData.append('folder', folder);
             
             // Show progress
             progressContainer.style.display = 'block';
             uploadBtn.disabled = true;
+            resultsContainer.style.display = 'none';
+            resultsContainer.innerHTML = '';
             
-            // Upload file
+            // Upload files
             const xhr = new XMLHttpRequest();
             
             xhr.upload.addEventListener('progress', (event) => {
@@ -306,20 +361,28 @@
                     if (response.success) {
                         progressBar.style.width = '100%';
                         statusText.textContent = 'Upload complete!';
-                        showMessage('File uploaded successfully!', 'success');
-                        
-                        // Reset form
-                        setTimeout(() => {
-                            fileInput.value = '';
-                            selectedFileText.textContent = 'No file selected';
-                            progressContainer.style.display = 'none';
-                            progressBar.style.width = '0%';
-                            uploadBtn.disabled = true;
-                        }, 2000);
+                        showMessage(response.message, 'success');
                     } else {
-                        statusText.textContent = 'Upload failed';
-                        showMessage(response.message || 'Upload failed', 'error');
+                        statusText.textContent = 'Some uploads failed';
+                        showMessage(response.message || 'Some uploads failed', 'error');
                     }
+                    
+                    // Show detailed results
+                    if (response.results && response.results.length > 0) {
+                        displayResults(response.results);
+                    }
+                    
+                    // Reset form
+                    setTimeout(() => {
+                        if (response.success) {
+                            fileInput.value = '';
+                            selectedFilesContainer.style.display = 'none';
+                            selectedFilesContainer.innerHTML = '';
+                            uploadBtn.disabled = true;
+                        }
+                        progressContainer.style.display = 'none';
+                        progressBar.style.width = '0%';
+                    }, 2000);
                 } catch (e) {
                     statusText.textContent = 'Upload failed';
                     showMessage('An error occurred during upload', 'error');
@@ -333,6 +396,28 @@
             
             xhr.open('POST', '/upload', true);
             xhr.send(formData);
+        }
+
+        function displayResults(results) {
+            resultsContainer.innerHTML = '';
+            resultsContainer.style.display = 'block';
+            
+            results.forEach(result => {
+                const resultItem = document.createElement('div');
+                resultItem.className = `result-item ${result.success ? 'result-success' : 'result-error'}`;
+                
+                const fileName = document.createElement('span');
+                fileName.textContent = result.filename;
+                
+                const status = document.createElement('span');
+                status.textContent = result.success ? '✓' : '✗';
+                
+                resultItem.appendChild(fileName);
+                resultItem.appendChild(status);
+                resultItem.title = result.message;
+                
+                resultsContainer.appendChild(resultItem);
+            });
         }
 
         function loadFolders() {

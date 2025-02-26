@@ -1041,23 +1041,11 @@ def upload_file():
     if 'file' not in request.files:
         return jsonify({'success': False, 'message': 'No file part'})
     
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'success': False, 'message': 'No file selected'})
+    files = request.files.getlist('file')
+    if not files or files[0].filename == '':
+        return jsonify({'success': False, 'message': 'No files selected'})
     
     folder = request.form.get('folder', '')
-    
-    # Determine file extension and check if it's allowed
-    extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
-    
-    # Automatically detect file type based on extension
-    if extension in ALLOWED_PHOTO_EXTENSIONS:
-        file_type = 'photo'
-    elif extension in ALLOWED_VIDEO_EXTENSIONS:
-        file_type = 'video'
-    else:
-        allowed_extensions = list(ALLOWED_PHOTO_EXTENSIONS) + list(ALLOWED_VIDEO_EXTENSIONS)
-        return jsonify({'success': False, 'message': f'File type not allowed. Allowed types: {", ".join(allowed_extensions)}'})
     
     # Determine the target directory
     if folder:
@@ -1068,11 +1056,48 @@ def upload_file():
     # Create directory if it doesn't exist
     os.makedirs(target_dir, exist_ok=True)
     
-    # Save the file
-    file_path = os.path.join(target_dir, file.filename)
-    file.save(file_path)
+    results = []
+    for file in files:
+        # Determine file extension and check if it's allowed
+        extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        
+        # Automatically detect file type based on extension
+        if extension in ALLOWED_PHOTO_EXTENSIONS:
+            file_type = 'photo'
+        elif extension in ALLOWED_VIDEO_EXTENSIONS:
+            file_type = 'video'
+        else:
+            results.append({
+                'filename': file.filename,
+                'success': False,
+                'message': f'File type not allowed. Allowed types: {", ".join(list(ALLOWED_PHOTO_EXTENSIONS) + list(ALLOWED_VIDEO_EXTENSIONS))}'
+            })
+            continue
+        
+        try:
+            # Save the file
+            file_path = os.path.join(target_dir, file.filename)
+            file.save(file_path)
+            results.append({
+                'filename': file.filename,
+                'success': True,
+                'message': f'Uploaded successfully as {file_type}'
+            })
+        except Exception as e:
+            results.append({
+                'filename': file.filename,
+                'success': False,
+                'message': f'Error: {str(e)}'
+            })
     
-    return jsonify({'success': True, 'message': f'File uploaded successfully as {file_type}'})
+    # Determine overall success
+    all_success = all(result['success'] for result in results)
+    
+    return jsonify({
+        'success': all_success,
+        'results': results,
+        'message': f'Uploaded {sum(1 for r in results if r["success"])} of {len(results)} files successfully'
+    })
 
 @app.route('/api/folders')
 def get_media_folders():
