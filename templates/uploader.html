@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Uploader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/svg+xml" 
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 8L16 24h10v20h12V24h10L32 8z' fill='%234a9eff'/%3E%3Cpath d='M48 40v8H16v-8H8v16h48V40h-8z' fill='%234a9eff'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --bg-color: #000;
+            --card-bg: #2d2d2d;
+            --text-color: #ffffff;
+            --accent-color: #4a9eff;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .upload-form {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: #333;
+            color: var(--text-color);
+            font-size: 16px;
+        }
+
+        .file-input-container {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .file-input-label:hover {
+            background-color: #3a8ae0;
+        }
+
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .selected-file {
+            margin-top: 10px;
+            font-style: italic;
+            word-break: break-all;
+        }
+
+        .upload-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .upload-btn:hover {
+            background-color: #3a8ae0;
+        }
+
+        .upload-btn:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .status {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .back-button:hover {
+            background-color: #444;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .success {
+            background-color: rgba(0, 128, 0, 0.2);
+            color: #4caf50;
+        }
+
+        .error {
+            background-color: rgba(255, 0, 0, 0.2);
+            color: #f44336;
+        }
+
+        .folder-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .folder-input-container select {
+            flex: 1;
+        }
+
+        .folder-input-container button {
+            padding: 10px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid #444;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .folder-input-container button:hover {
+            background-color: #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-button"><i class="fas fa-arrow-left"></i> Back to Home</a>
+        
+        <h1>Upload Files</h1>
+        
+        <div class="upload-form">
+            <div class="form-group">
+                <label for="folder">Destination Folder</label>
+                <div class="folder-input-container">
+                    <select id="folder">
+                        <option value="">Root Folder</option>
+                        <!-- Folders will be loaded dynamically -->
+                    </select>
+                    <button id="refresh-folders"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div class="file-input-container">
+                    <label for="file" class="file-input-label">
+                        <i class="fas fa-cloud-upload-alt"></i> Choose File
+                    </label>
+                    <input type="file" id="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.mp4,.avi,.mov,.mkv">
+                </div>
+                <div class="selected-file" id="selected-file">No file selected</div>
+            </div>
+            
+            <button id="upload-btn" class="upload-btn" disabled>Upload</button>
+            
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <div class="status" id="status">Uploading...</div>
+            </div>
+            
+            <div id="message" class="message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const folderSelect = document.getElementById('folder');
+        const refreshFoldersBtn = document.getElementById('refresh-folders');
+        const fileInput = document.getElementById('file');
+        const selectedFileText = document.getElementById('selected-file');
+        const uploadBtn = document.getElementById('upload-btn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress');
+        const statusText = document.getElementById('status');
+        const messageDiv = document.getElementById('message');
+
+        // Load folders when page loads
+        loadFolders();
+
+        // Event listeners
+        fileInput.addEventListener('change', handleFileSelect);
+        uploadBtn.addEventListener('click', uploadFile);
+        refreshFoldersBtn.addEventListener('click', loadFolders);
+
+        // Functions
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                selectedFileText.textContent = file.name;
+                uploadBtn.disabled = false;
+                hideMessage();
+            } else {
+                selectedFileText.textContent = 'No file selected';
+                uploadBtn.disabled = true;
+            }
+        }
+
+        function uploadFile() {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            const folder = folderSelect.value;
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('folder', folder);
+            
+            // Show progress
+            progressContainer.style.display = 'block';
+            uploadBtn.disabled = true;
+            
+            // Upload file
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', (event) => {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                    statusText.textContent = `Uploading... ${Math.round(percentComplete)}%`;
+                }
+            });
+            
+            xhr.addEventListener('load', () => {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        progressBar.style.width = '100%';
+                        statusText.textContent = 'Upload complete!';
+                        showMessage('File uploaded successfully!', 'success');
+                        
+                        // Reset form
+                        setTimeout(() => {
+                            fileInput.value = '';
+                            selectedFileText.textContent = 'No file selected';
+                            progressContainer.style.display = 'none';
+                            progressBar.style.width = '0%';
+                            uploadBtn.disabled = true;
+                        }, 2000);
+                    } else {
+                        statusText.textContent = 'Upload failed';
+                        showMessage(response.message || 'Upload failed', 'error');
+                    }
+                } catch (e) {
+                    statusText.textContent = 'Upload failed';
+                    showMessage('An error occurred during upload', 'error');
+                }
+            });
+            
+            xhr.addEventListener('error', () => {
+                statusText.textContent = 'Upload failed';
+                showMessage('Network error occurred', 'error');
+            });
+            
+            xhr.open('POST', '/upload', true);
+            xhr.send(formData);
+        }
+
+        function loadFolders() {
+            fetch('/api/folders')
+                .then(response => response.json())
+                .then(folders => {
+                    // Clear existing options except the first one
+                    while (folderSelect.options.length > 1) {
+                        folderSelect.remove(1);
+                    }
+                    
+                    // Add folders
+                    folders.forEach(folder => {
+                        const option = document.createElement('option');
+                        option.value = folder;
+                        option.textContent = folder;
+                        folderSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading folders:', error);
+                });
+        }
+
+        function showMessage(text, type) {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+        }
+
+        function hideMessage() {
+            messageDiv.style.display = 'none';
+        }
+    </script>
+</body>
+</html> 
