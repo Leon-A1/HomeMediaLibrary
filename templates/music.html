@@ -327,7 +327,18 @@
     </div>
         <div id="playlist">
             {% for song in music_files %}
-            <button class="play-button" data-song="{{ song }}">{{ song.rsplit('.', 1)[0] }}</button>
+            <div class="song-container">
+                <button class="play-button" data-song="{{ song }}">{{ song.rsplit('.', 1)[0] }}</button>
+                <button class="delete-button" data-song="{{ song }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
+                        <path stroke="#e74c3c" stroke-width="2" stroke-linecap="round" d="M3 6h18" />
+                        <path stroke="#e74c3c" stroke-width="2" stroke-linecap="round" d="M8 6V4h8v2" />
+                        <path stroke="#e74c3c" stroke-width="2" stroke-linecap="round" d="M10 11v6" />
+                        <path stroke="#e74c3c" stroke-width="2" stroke-linecap="round" d="M14 11v6" />
+                        <path stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 6l1 14a2 2 0 002 2h8a2 2 0 002-2L19 6" />
+                    </svg>
+                </button>
+            </div>
             {% endfor %}
             </div>
 
@@ -574,6 +585,10 @@ function playSong(song) {
         
         updateMediaInfo(song);
         currentSongIndex = songList.indexOf(song);
+        
+        // Remember this song and folder
+        localStorage.setItem('lastPlayedSong', song);
+        localStorage.setItem('lastPlayedFolder', currentFolder);
     }
 
 
@@ -708,6 +723,104 @@ function playSong(song) {
         } else {
             console.error('Reset button not found in the DOM');
         }
+    });
+
+    // Add this function to handle keyboard shortcuts
+    function setupKeyboardShortcuts() {
+        document.addEventListener('keydown', function(e) {
+            // Space bar to play/pause
+            if (e.code === 'Space' && !e.target.matches('input, textarea, button')) {
+                e.preventDefault();
+                if (audioPlayer.paused) {
+                    audioPlayer.play();
+                } else {
+                    audioPlayer.pause();
+                }
+            }
+            
+            // Right arrow for next song
+            if (e.code === 'ArrowRight' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                playNextSong();
+            }
+            
+            // Left arrow for previous song
+            if (e.code === 'ArrowLeft' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                playPreviousSong();
+            }
+            
+            // M key to toggle mute
+            if (e.code === 'KeyM' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                audioPlayer.muted = !audioPlayer.muted;
+            }
+        });
+    }
+    
+    // Add this function to play the previous song
+    function playPreviousSong() {
+        if (songList.length === 0) return;
+        
+        if (shuffleMode) {
+            // For shuffle mode, we could implement a history stack
+            // This is a simple implementation - you might want to enhance it
+            currentSongIndex = (currentSongIndex - 1 + songList.length) % songList.length;
+            playSong(songList[currentSongIndex]);
+        } else {
+            currentSongIndex = (currentSongIndex - 1 + songList.length) % songList.length;
+            playSong(songList[currentSongIndex]);
+        }
+    }
+    
+    // Add volume control functionality
+    function setupVolumeControl() {
+        // You could add a volume slider to the UI and connect it here
+        // For now, we'll just set a default volume
+        audioPlayer.volume = 0.7;
+        
+        // Remember volume setting in localStorage
+        if (localStorage.getItem('musicVolume')) {
+            audioPlayer.volume = parseFloat(localStorage.getItem('musicVolume'));
+        }
+        
+        audioPlayer.addEventListener('volumechange', function() {
+            localStorage.setItem('musicVolume', audioPlayer.volume);
+        });
+    }
+    
+    // Add this to remember the last played song and folder
+    function setupPersistence() {
+        // Remember last played song
+        if (localStorage.getItem('lastPlayedSong') && localStorage.getItem('lastPlayedFolder')) {
+            const lastFolder = localStorage.getItem('lastPlayedFolder');
+            const lastSong = localStorage.getItem('lastPlayedSong');
+            
+            // Set the folder selector to the last folder
+            if (folderSelector.querySelector(`option[value="${lastFolder}"]`)) {
+                folderSelector.value = lastFolder;
+                // Trigger the change event to load songs from this folder
+                const event = new Event('change');
+                folderSelector.dispatchEvent(event);
+                
+                // After folder is loaded, play the last song
+                setTimeout(() => {
+                    const songButton = document.querySelector(`[data-song="${lastSong}"]`);
+                    if (songButton) {
+                        songButton.click();
+                    }
+                }, 500);
+            }
+        }
+    }
+    
+    // Call the new setup functions
+    document.addEventListener('DOMContentLoaded', function() {
+        // ... existing code ...
+        
+        setupKeyboardShortcuts();
+        setupVolumeControl();
+        setupPersistence();
     });
     </script>
 </body>
