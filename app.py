@@ -36,6 +36,7 @@ ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 FINISHED_BOOKS_FILE = files_dir + "/finished_books.json"
 PASSWORD = "123"  # Locked will be hidden until a password is set
 
+
 # Add these global variables at the top of the file
 download_progress = {}
 progress_queue = queue.Queue()
@@ -233,7 +234,7 @@ def has_protected_content():
 def index():
     quotes_path = os.path.join('Files', 'inspirational_quotes.json')
     try:
-        with open(quotes_path, 'r') as f:
+        with open(quotes_path, 'r', encoding='utf-8') as f:
             quotes = json.load(f)
 
         quote = random.choice(quotes) if quotes else None
