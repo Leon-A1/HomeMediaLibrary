@@ -15,6 +15,7 @@ import threading
 import yt_dlp
 from bs4 import BeautifulSoup
 import html
+import random
 
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
@@ -228,15 +229,25 @@ def check_auth():
 def has_protected_content():
     return bool(PASSWORD.strip()) 
 
-    
 @app.route('/')
 def index():
-    return render_template('index.html',
-                         has_books=has_books(),
-                         has_music=has_music(),
-                         has_photos=has_photos(),
-                         has_videos=has_videos(),
-                         has_protected=has_protected_content())
+    quotes_path = os.path.join('Files', 'inspirational_quotes.json')
+    try:
+        with open(quotes_path, 'r') as f:
+            quotes = json.load(f)
+
+        quote = random.choice(quotes) if quotes else None
+    except (FileNotFoundError, json.JSONDecodeError):
+        quote = None
+    
+    return render_template('index.html', 
+                          quote=quote,
+                          has_music=has_music(),
+                          has_books=has_books(),
+                          has_photos=has_photos(),
+                          has_videos=has_videos(),
+                          has_protected=has_protected_content())
+
 
 @app.route('/books')
 def books():

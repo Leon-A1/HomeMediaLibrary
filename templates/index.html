@@ -51,9 +51,37 @@
         a:hover svg {
             fill: #ffffff;
         }
+
+        .quote-container {
+            text-align: center;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            border-left: 4px solid #4a9eff;
+        }
+        
+        .quote-text {
+            font-style: italic;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .quote-author {
+            font-size: 0.9rem;
+            color: #999;
+            text-align: right;
+        }
     </style>
 </head>
 <body>
+    {% if quote %}
+    <div class="quote-container">
+        <p class="quote-text">"{{ quote.content }}"</p>
+        <p class="quote-author">— {{ quote.Authour }}</p>
+    </div>
+    {% endif %}
+    
     <div class="nav-buttons">
         {% if has_music %}
         <a href="/music">
