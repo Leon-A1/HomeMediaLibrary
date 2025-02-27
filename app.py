@@ -1162,6 +1162,36 @@ def get_media_folders():
     
     return jsonify(folders)
 
+@app.route('/reset_shuffle', methods=['POST'])
+def reset_shuffle():
+    data = request.get_json()
+    folder_name = data.get('folder', 'Downloads')
+    
+    try:
+        # Build the path to the shuffle history file
+        json_path = os.path.join(SHUFFLED_DIR, f"{folder_name}.json")
+        # json_path = os.path.join(SHUFFLED_DIR, f"Heb.json")
+        
+        # Check if the file exists
+        if os.path.exists(json_path):
+            # Delete the file
+            os.remove(json_path)
+            return jsonify({
+                'success': True,
+                'message': f'Shuffle history for {folder_name} has been reset'
+            })
+        else:
+            # File doesn't exist, but that's okay - it's already "reset"
+            return jsonify({
+                'success': True,
+                'message': f'No shuffle history found for {folder_name}'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error resetting shuffle history: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     print("Starting server...")
     os.makedirs(BOOK_DIR, exist_ok=True)
