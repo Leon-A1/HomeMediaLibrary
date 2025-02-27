@@ -680,6 +680,44 @@ def update_page(name):
 
     return jsonify({"success": True, "page": page})
 
+@app.route('/notebook/<name>/rename', methods=['POST'])
+def rename_page(name):
+    data = request.json
+    new_name = data.get('newName')
+    
+    if not new_name:
+        return jsonify({"success": False, "message": "New name cannot be empty"})
+    
+    # Check if the new name already exists
+    new_filename = f"{new_name}.json"
+    new_filepath = os.path.join(NOTEBOOK_DIR, new_filename)
+    if os.path.exists(new_filepath):
+        return jsonify({"success": False, "message": "A page with this name already exists"})
+    
+    # Get the old file
+    old_filename = f"{name}.json"
+    old_filepath = os.path.join(NOTEBOOK_DIR, old_filename)
+    
+    if not os.path.exists(old_filepath):
+        return jsonify({"success": False, "message": "Page not found"})
+    
+    # Load the page data
+    with open(old_filepath, 'r') as f:
+        page = json.load(f)
+    
+    # Update the name and updatedAt
+    page['name'] = new_name
+    page['updatedAt'] = datetime.now().isoformat()
+    
+    # Save to the new file
+    with open(new_filepath, 'w') as f:
+        json.dump(page, f, indent=4)
+    
+    # Delete the old file
+    os.remove(old_filepath)
+    
+    return jsonify({"success": True, "page": page})
+
 def download_from_youtube(url, format_type, download_id, folder):
     try:
         # Define base paths

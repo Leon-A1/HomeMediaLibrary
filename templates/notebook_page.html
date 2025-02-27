@@ -65,6 +65,7 @@
             padding: 10px;
             background: #404040;
             border-radius: 8px;
+            flex-wrap: wrap;
         }
         .format-btn {
             background: none;
@@ -74,6 +75,7 @@
             border-radius: 4px;
             cursor: pointer;
             transition: background 0.2s;
+            min-width: 30px;
         }
         .format-btn.active {
             background: #4a9eff !important;
@@ -108,6 +110,44 @@
             border-radius: 8px;
             cursor: pointer;
         }
+        .rename-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 1.5em;
+            background: #2d2d2d;
+            color: #fff;
+            border: 1px solid #404040;
+            border-radius: 8px;
+        }
+        
+        /* Add tooltip for keyboard shortcuts */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8em;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.0/purify.min.js"></script>
 </head>
@@ -116,10 +156,21 @@
         <a href="/notebook" class="back-button" style="text-decoration: none;background-color: #000000;">🔙</a>
         <div class="button-group">
             <button onclick="toggleEdit()" id="editBtn" class="button">Edit</button>
+            <button onclick="toggleRename()" id="renameBtn" class="button">Rename</button>
         </div>
     </div>
 
-    <h1>{{ page.name }}</h1>
+    <div id="titleContainer">
+        <h1 id="pageTitle">{{ page.name }}</h1>
+        <div id="renameContainer" style="display: none; margin-bottom: 15px;">
+            <input type="text" id="newPageName" value="{{ page.name }}" class="rename-input">
+            <div class="button-group" style="margin-top: 10px;">
+                <button onclick="renamePage()" class="button">Save Name</button>
+                <button onclick="toggleRename()" class="button cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div class="date-info">
         Created: {{ page.createdAt.split('T')[0] }}
         {% if page.updatedAt != page.createdAt %}
@@ -130,9 +181,21 @@
     <div id="viewMode" class="content">{{ page.content|safe }}</div>
     <div id="editMode" class="content" style="display: none;">
         <div class="toolbar">
-            <button class="format-btn" data-command="bold" onclick="formatText('bold')" title="Bold"><strong>B</strong></button>
-            <button class="format-btn" data-command="italic" onclick="formatText('italic')" title="Italic"><em>I</em></button>
-            <button class="format-btn" data-command="underline" onclick="formatText('underline')" title="Underline"><u>U</u></button>
+            <button class="format-btn tooltip" data-command="bold" onclick="formatText('bold')">
+                <strong>B</strong>
+                <span class="tooltiptext">Bold (Ctrl+B)</span>
+            </button>
+            <button class="format-btn tooltip" data-command="italic" onclick="formatText('italic')">
+                <em>I</em>
+                <span class="tooltiptext">Italic (Ctrl+I)</span>
+            </button>
+            <button class="format-btn tooltip" data-command="underline" onclick="formatText('underline')">
+                <u>U</u>
+                <span class="tooltiptext">Underline (Ctrl+U)</span>
+            </button>
+            <button class="format-btn" data-command="insertUnorderedList" onclick="formatText('insertUnorderedList')">• List</button>
+            <button class="format-btn" data-command="insertOrderedList" onclick="formatText('insertOrderedList')">1. List</button>
+            <button class="format-btn" data-command="createLink" onclick="createLink()">🔗 Link</button>
         </div>
         <div id="editor" contenteditable="true">{{ page.content|safe }}</div>
         <div class="button-group" style="margin-top: 20px;">
@@ -191,9 +254,81 @@
             });
         }
 
+        function toggleRename() {
+            const titleElement = document.getElementById('pageTitle');
+            const renameContainer = document.getElementById('renameContainer');
+            const newPageName = document.getElementById('newPageName');
+            
+            if (renameContainer.style.display === 'none') {
+                titleElement.style.display = 'none';
+                renameContainer.style.display = 'block';
+                newPageName.focus();
+                newPageName.select();
+            } else {
+                titleElement.style.display = 'block';
+                renameContainer.style.display = 'none';
+            }
+        }
+        
+        function renamePage() {
+            const newName = document.getElementById('newPageName').value.trim();
+            if (!newName) {
+                alert('Page name cannot be empty');
+                return;
+            }
+            
+            fetch(window.location.pathname + '/rename', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ newName }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = `/notebook/${data.page.name}`;
+                } else {
+                    alert(data.message || 'Failed to rename page');
+                }
+            });
+        }
+        
+        // Add keyboard shortcut for saving (Ctrl+S)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 's' && document.getElementById('editMode').style.display !== 'none') {
+                e.preventDefault();
+                savePage();
+            }
+        });
+        
+        // Add keyboard shortcut for Ctrl+B, Ctrl+I, Ctrl+U in editor
+        document.getElementById('editor').addEventListener('keydown', function(e) {
+            if (e.ctrlKey) {
+                if (e.key === 'b') {
+                    e.preventDefault();
+                    formatText('bold');
+                } else if (e.key === 'i') {
+                    e.preventDefault();
+                    formatText('italic');
+                } else if (e.key === 'u') {
+                    e.preventDefault();
+                    formatText('underline');
+                }
+            }
+        });
+
         // Add event listeners for selection changes
         document.getElementById('editor').addEventListener('mouseup', updateButtonStates);
         document.getElementById('editor').addEventListener('keyup', updateButtonStates);
+
+        function createLink() {
+            const url = prompt('Enter the URL:');
+            if (url) {
+                document.execCommand('createLink', false, url);
+                updateButtonStates();
+            }
+        }
     </script>
 </body>
 </html>
