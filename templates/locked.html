@@ -125,19 +125,21 @@
         window.addEventListener('scroll', () => {
             if (loading || !hasMore) return;
             
-            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-            if (scrollTop + clientHeight >= scrollHeight - 500) {
+            const scrollPosition = window.innerHeight + window.scrollY;
+            const scrollThreshold = document.documentElement.scrollHeight - 700; // Reduced from 700 to match photos.html
+            
+            if (scrollPosition >= scrollThreshold) {
                 loadItems();
             }
         });
 
         function loadItems() {
-            if (loading || !hasMore) return;
+            if (loading || !hasMore) return Promise.resolve();
             
             loading = true;
             document.getElementById('loading').style.display = 'block';
 
-            fetch(`/api/locked?page=${currentPage}`)
+            return fetch(`/api/locked?page=${currentPage}`)
                 .then(response => response.json())
                 .then(data => {
                     const grid = document.getElementById('mediaGrid');
@@ -198,6 +200,11 @@
                     currentPage++;
                     loading = false;
                     document.getElementById('loading').style.display = 'none';
+                    
+                    // Check if we need to load more items immediately - improved for mobile
+                    if (hasMore && (document.documentElement.scrollHeight <= window.innerHeight + 200)) {
+                        return loadItems();
+                    }
                 })
                 .catch(error => {
                     console.error('Error loading items:', error);

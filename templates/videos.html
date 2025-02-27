@@ -171,7 +171,7 @@
             if (loading || !hasMore) return;
             
             const scrollPosition = window.innerHeight + window.scrollY;
-            const scrollThreshold = document.documentElement.scrollHeight - 500;
+            const scrollThreshold = document.documentElement.scrollHeight - 700;
             
             if (scrollPosition >= scrollThreshold) {
                 loadItems();
@@ -251,7 +251,7 @@
                     }
                     currentVideos = currentVideos.concat(data.items.map(video => `/media/${currentPath}${video}`));
 
-                    if (hasMore && document.documentElement.scrollHeight <= window.innerHeight) {
+                    if (hasMore && (document.documentElement.scrollHeight <= window.innerHeight + 200)) {
                         return loadItems();
                     }
                 })

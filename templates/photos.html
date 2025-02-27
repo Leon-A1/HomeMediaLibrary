@@ -148,7 +148,6 @@
         let currentPath = '';
         let currentPhotos = [];
         let currentPhotoIndex = 0;
-
         // Load initial items
         loadItems();
 
@@ -157,8 +156,7 @@
             if (loading || !hasMore) return;
             
             const scrollPosition = window.innerHeight + window.scrollY;
-            const scrollThreshold = document.documentElement.scrollHeight - 500; // Trigger earlier
-            
+            const scrollThreshold = document.documentElement.scrollHeight - 700; // Reduced threshold for better mobile experience
             if (scrollPosition >= scrollThreshold) {
                 loadItems();
             }
@@ -220,8 +218,8 @@
                     }
                     currentPhotos = currentPhotos.concat(data.items.map(photo => `/media/${currentPath}${photo}`));
 
-                    // Check if we need to load more items immediately
-                    if (hasMore && document.documentElement.scrollHeight <= window.innerHeight) {
+                    // Check if we need to load more items immediately - improved for mobile
+                    if (hasMore && (document.documentElement.scrollHeight <= window.innerHeight + 200)) {
                         return loadItems();
                     }
                 })
