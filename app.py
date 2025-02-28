@@ -16,6 +16,9 @@ import yt_dlp
 from bs4 import BeautifulSoup
 import html
 import random
+import re
+import urllib
+
 
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
@@ -811,8 +814,6 @@ def read_book(filename):
     title = filename[:-5]  # remove .epub
     return render_template('reader.html', filename=filename, title=title)
 
-
-
 @app.route('/book-content/<path:filename>')
 def get_book_content(filename):
     if not allowed_file(filename):
@@ -827,29 +828,42 @@ def get_book_content(filename):
         if item.get_type() == ebooklib.ITEM_IMAGE:
             try:
                 image_data = base64.b64encode(item.get_content()).decode('utf-8')
+                
                 # Get file extension from the name or default to jpeg
                 name = item.get_name()
                 ext = name.split('.')[-1].lower() if '.' in name else 'jpeg'
-                # Map both the full path and the basename
+                
+                # Set the appropriate MIME type
                 mime_type = f"image/{ext}"
                 if ext == 'svg':
                     mime_type = "image/svg+xml"
-                elif ext == 'jpg':
+                elif ext in ['jpg', 'jpeg']:
                     mime_type = "image/jpeg"
                 
                 data_url = f"data:{mime_type};base64,{image_data}"
-                image_map[name] = data_url
-                image_map[os.path.basename(name)] = data_url
                 
-                # Also map without extension for cases where src doesn't include it
+                # Map the image using multiple possible key formats to improve link resolution
+                image_map[name] = data_url  # Full path
+                image_map[os.path.basename(name)] = data_url  # Just the filename
+                
+                # Also map without extension
                 base_without_ext = os.path.splitext(os.path.basename(name))[0]
                 image_map[base_without_ext] = data_url
+                
+                # Additional mapping for URL-encoded paths
+                image_map[urllib.parse.unquote(name)] = data_url
+                image_map[urllib.parse.quote(name)] = data_url
+                
+                # Handle relative paths
+                image_map[name.lstrip('./')] = data_url
+                
             except Exception as e:
                 print(f"Error processing image {item.get_name()}: {e}")
     
-    pages = []
-    episodes = []  # Group pages by document (episode)
+    all_content = []
+    episodes = []
     
+    # First pass: Extract all document content
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
             try:
@@ -859,36 +873,185 @@ def get_book_content(filename):
                 for tag in soup.find_all(['style', 'link']):
                     tag.decompose()
                 
-                # Update img tags to use base64 data
+                # Fix image links
                 for img in soup.find_all('img'):
                     src = img.get('src')
                     if src:
+                        img_matched = False
+                        
                         # Try different variations of the src to find a match
-                        if src in image_map:
-                            img['src'] = image_map[src]
-                        else:
-                            basename = os.path.basename(src)
-                            if basename in image_map:
-                                img['src'] = image_map[basename]
-                            else:
-                                # Try without extension
-                                base_without_ext = os.path.splitext(basename)[0]
-                                if base_without_ext in image_map:
-                                    img['src'] = image_map[base_without_ext]
+                        potential_matches = [
+                            src,
+                            os.path.basename(src),
+                            os.path.splitext(os.path.basename(src))[0],
+                            urllib.parse.unquote(src),
+                            urllib.parse.quote(src),
+                            src.lstrip('./')
+                        ]
+                        
+                        for potential_src in potential_matches:
+                            if potential_src in image_map:
+                                img['src'] = image_map[potential_src]
+                                img_matched = True
+                                break
+                        
+                        if not img_matched:
+                            # If no match found, set a placeholder or remove
+                            img['src'] = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAB3RJTUUH4QgFDDYAFzD+TgAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAABISURBVHja7c0xAQAACAMgtH+KLzrABTZ4ABIkQIAASIAAAZAAARIgAZAAARIgARIgAQIkQAIEQAIESIAESIAE6G9PwQGAAQBfgwvLTzLiAgAAAABJRU5ErkJggg=='
                 
+                # Get html content
                 content = str(soup.body) if soup.body else str(soup)
                 unescaped_content = html.unescape(content)
                 
-                print("\n\nUNESCAPED CONTENT:\n", unescaped_content)
-                split_pages = [unescaped_content]
-                episodes.append(split_pages)
-                pages.extend(split_pages)
+                # Add to all content collection for further processing
+                all_content.append(unescaped_content)
+                
             except Exception as e:
                 print(f"Error processing document {item.get_name()}: {e}")
     
-    cover_data = extract_cover(book_path)
+    # Second pass: Split content into pages of appropriate length
+    standardized_pages = []
+    current_episodes = []
     
-    return jsonify({'pages': pages, 'cover': cover_data, 'episodes': episodes})
+    for doc_content in all_content:
+        # Remove HTML tags for character counting but preserve for actual content
+        text_only = BeautifulSoup(doc_content, 'html.parser').get_text()
+        max_length = 1000
+        if len(text_only) <= max_length:
+            # If content is already within range, keep as is
+            standardized_pages.append(doc_content)
+            current_episodes.append([doc_content])
+        else:
+            # Need to split this content
+            doc_soup = BeautifulSoup(doc_content, 'html.parser')
+            elements = list(doc_soup.body.children) if doc_soup.body else list(doc_soup.children)
+            
+            pages = []
+            current_page = ''
+            current_page_text_length = 0
+            
+            for elem in elements:
+                elem_str = str(elem)
+                elem_text = elem.get_text() if hasattr(elem, 'get_text') else str(elem)
+                
+                # If adding this element would exceed our limit, start a new page
+                if current_page_text_length + len(elem_text) > max_length and current_page_text_length > 800:
+                    pages.append(current_page)
+                    current_page = elem_str
+                    current_page_text_length = len(elem_text)
+                else:
+                    current_page += elem_str
+                    current_page_text_length += len(elem_text)
+            
+            # Add the last page if it has content
+            if current_page:
+                pages.append(current_page)
+            
+            # Handle edge case where a single element is larger than our limit
+            final_pages = []
+            for page in pages:
+                page_text = BeautifulSoup(page, 'html.parser').get_text()
+                if len(page_text) > max_length:
+                    # Further split this page by sentences or paragraphs
+                    chunks = split_large_element(page)
+                    final_pages.extend(chunks)
+                else:
+                    final_pages.append(page)
+            
+            standardized_pages.extend(final_pages)
+            current_episodes.append(final_pages)
+    
+    cover_data = extract_cover(book_path)
+    return jsonify({
+        'pages': standardized_pages, 
+        'cover': cover_data, 
+        'episodes': current_episodes
+    })
+
+def split_large_element(html_content):
+    """Split a large HTML element into smaller chunks of 800-1000 characters."""
+    soup = BeautifulSoup(html_content, 'html.parser')
+    text = soup.get_text()
+    
+    # If it's not that much over, just return it
+    if len(text) < 1200:
+        return [html_content]
+    
+    # Try to find natural breaking points (paragraphs, sentences)
+    paragraphs = re.split(r'(<p>|<div>|<br\s*\/?>)', html_content, flags=re.IGNORECASE)
+    
+    chunks = []
+    current_chunk = ''
+    current_text_length = 0
+    
+    for p in paragraphs:
+        p_text = BeautifulSoup(p, 'html.parser').get_text()
+        
+        if current_text_length + len(p_text) > 1000 and current_text_length > 800:
+            chunks.append(current_chunk)
+            current_chunk = p
+            current_text_length = len(p_text)
+        else:
+            current_chunk += p
+            current_text_length += len(p_text)
+    
+    # Add the last chunk
+    if current_chunk:
+        chunks.append(current_chunk)
+    
+    # If we still have chunks that are too large, split by sentences
+    final_chunks = []
+    for chunk in chunks:
+        chunk_text = BeautifulSoup(chunk, 'html.parser').get_text()
+        
+        if len(chunk_text) > 1000:
+            # Split by sentences, trying to keep HTML intact
+            sentence_chunks = split_by_sentences(chunk)
+            final_chunks.extend(sentence_chunks)
+        else:
+            final_chunks.append(chunk)
+    
+    return final_chunks
+
+def split_by_sentences(html_content):
+    """Split HTML content by sentences, attempting to keep HTML structure."""
+    # This is a simplified approach - for production, you'd need more sophisticated parsing
+    soup = BeautifulSoup(html_content, 'html.parser')
+    text = soup.get_text()
+    
+    # Split text into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    
+    chunks = []
+    current_chunk = ''
+    current_text = ''
+    
+    for sentence in sentences:
+        if len(current_text + sentence) > 1000 and len(current_text) > 800:
+            chunks.append(current_chunk)
+            # Find this sentence in the HTML and start a new chunk
+            sentence_pos = html_content.find(sentence, len(current_chunk))
+            if sentence_pos != -1:
+                current_chunk = html_content[sentence_pos:]
+                current_text = sentence
+            else:
+                # Fallback if we can't find the exact position
+                current_chunk = f"<p>{sentence}</p>"
+                current_text = sentence
+        else:
+            if not current_chunk:
+                sentence_pos = html_content.find(sentence)
+                if sentence_pos != -1:
+                    current_chunk = html_content[:sentence_pos + len(sentence)]
+                else:
+                    current_chunk = f"<p>{sentence}</p>"
+            current_text += sentence
+    
+    # Add the last chunk
+    if current_chunk:
+        chunks.append(current_chunk)
+    
+    return chunks
 
 def load_bookmarks():
     if os.path.exists(BOOKMARKS_FILE):
