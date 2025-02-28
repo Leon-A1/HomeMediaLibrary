@@ -58,20 +58,7 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def extract_cover(epub_path):
-    try:
-        book = epub.read_epub(epub_path)
-        # Try to find the cover image
-        for item in book.get_items():
-            if item.get_type() == ebooklib.ITEM_COVER or \
-               item.get_type() == ebooklib.ITEM_IMAGE:
-                # Convert image data to base64 for displaying in HTML
-                image_data = base64.b64encode(item.get_content()).decode('utf-8')
-                return f"data:image/jpeg;base64,{image_data}"
-        return None
-    except Exception as e:
-        print(f"Error processing EPUB: {e} - File: {epub_path}")
-        return None
+
 
 
 def load_shuffle_history(folder_name):
@@ -189,8 +176,6 @@ def scan_photo_contents(directory, path=''):
     return folders, items
 
 
-def has_books():
-    return any(f.endswith('.epub') for f in os.listdir(BOOK_DIR))
 
 def has_music():
     # Check root music directory and Downloads folder
@@ -248,57 +233,6 @@ def index():
                           has_photos=has_photos(),
                           has_videos=has_videos(),
                           has_protected=has_protected_content())
-
-
-@app.route('/books')
-def books():
-    books = []
-    finished_books = load_finished_books()
-    
-    for filename in os.listdir(BOOK_DIR):
-        if allowed_file(filename):
-            book_path = os.path.join(BOOK_DIR, filename)
-            cover_data = extract_cover(book_path)
-            title = filename[:-5]  # remove .epub
-            books.append({
-                "title": title,
-                "cover": cover_data,
-                "filename": filename,
-                "finished": title in finished_books,
-                "finished_date": finished_books.get(title, None)
-            })
-    
-    # Sort books: unfinished first, then finished
-    books.sort(key=lambda x: (x['finished'], x['title'].lower()))
-    
-    return render_template('books.html', books=books)
-
-@app.route('/toggle_finished/<path:book_title>', methods=['POST'])
-def toggle_finished(book_title):
-    finished_books = load_finished_books()
-    
-    if book_title in finished_books:
-        del finished_books[book_title]
-        is_finished = False
-        finished_date = None
-    else:
-        finished_books[book_title] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        is_finished = True
-        finished_date = finished_books[book_title]
-    
-    save_finished_books(finished_books)
-    
-    return jsonify({
-        "success": True,
-        "is_finished": is_finished,
-        "finished_date": finished_date
-    })
-
-@app.route('/books/<path:filename>')
-def serve_book(filename):
-    if not allowed_file(filename):
-        abort(404)
-    return send_from_directory(BOOK_DIR, filename)
 
 @app.route('/music')
 def music():
@@ -862,6 +796,14 @@ def get_music_folders():
             folders.append(item)
     return jsonify(folders)
 
+
+
+
+
+########################################################
+#### Books ############################################
+########################################################
+
 @app.route('/read/<path:filename>')
 def read_book(filename):
     if not allowed_file(filename):
@@ -869,31 +811,7 @@ def read_book(filename):
     title = filename[:-5]  # remove .epub
     return render_template('reader.html', filename=filename, title=title)
 
-def split_long_page(content, max_length=1100):
-    """
-    Splits a long HTML content string into multiple pages.
-    This example splits based on paragraph breaks (</p>) and ensures that each chunk doesn't exceed max_length characters.
-    
-    You can adjust the splitting logic if you prefer a different approach (e.g., splitting on a word count or even based on rendered height on the client).
-    """
-    # Split the content using a paragraph end tag.
-    paragraphs = content.split(' ')
-    pages = []
-    current_page = ""
-    
-    for para in paragraphs:
-        # Re-add the closing tag, since we removed it in the split.
-        if para.strip():
-            para = para.strip() + ' '
-        # If adding the new paragraph would exceed max_length then start a new page.
-        if len(current_page) + len(para) > max_length:
-            pages.append(current_page)
-            current_page = para
-        else:
-            current_page += para
-    if current_page:
-        pages.append(current_page)
-    return pages
+
 
 @app.route('/book-content/<path:filename>')
 def get_book_content(filename):
@@ -907,35 +825,66 @@ def get_book_content(filename):
     image_map = {}
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_IMAGE:
-            image_data = base64.b64encode(item.get_content()).decode('utf-8')
-            ext = item.get_name().split('.')[-1]
-            image_map[item.get_name()] = f"data:image/{ext};base64,{image_data}"
-            image_map[os.path.basename(item.get_name())] = f"data:image/{ext};base64,{image_data}"
+            try:
+                image_data = base64.b64encode(item.get_content()).decode('utf-8')
+                # Get file extension from the name or default to jpeg
+                name = item.get_name()
+                ext = name.split('.')[-1].lower() if '.' in name else 'jpeg'
+                # Map both the full path and the basename
+                mime_type = f"image/{ext}"
+                if ext == 'svg':
+                    mime_type = "image/svg+xml"
+                elif ext == 'jpg':
+                    mime_type = "image/jpeg"
+                
+                data_url = f"data:{mime_type};base64,{image_data}"
+                image_map[name] = data_url
+                image_map[os.path.basename(name)] = data_url
+                
+                # Also map without extension for cases where src doesn't include it
+                base_without_ext = os.path.splitext(os.path.basename(name))[0]
+                image_map[base_without_ext] = data_url
+            except Exception as e:
+                print(f"Error processing image {item.get_name()}: {e}")
     
     pages = []
     episodes = []  # Group pages by document (episode)
+    
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
-            soup = BeautifulSoup(item.get_content(), 'html.parser')
-            # Remove style and link elements
-            for tag in soup.find_all(['style', 'link']):
-                tag.decompose()
-            # Update img tags to use base64 data
-            for img in soup.find_all('img'):
-                src = img.get('src')
-                if src:
-                    basename = os.path.basename(src)
-                    if basename in image_map:
-                        img['src'] = image_map[basename]
-                    elif src in image_map:
-                        img['src'] = image_map[src]
-            content = str(soup.body) if soup.body else str(soup)
-            unescaped_content = html.unescape(content)
-            
-            # Increase max_length to 3000 so that each page holds more content / fills more of the screen.
-            split_pages = split_long_page(unescaped_content)
-            episodes.append(split_pages)
-            pages.extend(split_pages)
+            try:
+                soup = BeautifulSoup(item.get_content(), 'html.parser')
+                
+                # Remove style and link elements
+                for tag in soup.find_all(['style', 'link']):
+                    tag.decompose()
+                
+                # Update img tags to use base64 data
+                for img in soup.find_all('img'):
+                    src = img.get('src')
+                    if src:
+                        # Try different variations of the src to find a match
+                        if src in image_map:
+                            img['src'] = image_map[src]
+                        else:
+                            basename = os.path.basename(src)
+                            if basename in image_map:
+                                img['src'] = image_map[basename]
+                            else:
+                                # Try without extension
+                                base_without_ext = os.path.splitext(basename)[0]
+                                if base_without_ext in image_map:
+                                    img['src'] = image_map[base_without_ext]
+                
+                content = str(soup.body) if soup.body else str(soup)
+                unescaped_content = html.unescape(content)
+                
+                print("\n\nUNESCAPED CONTENT:\n", unescaped_content)
+                split_pages = [unescaped_content]
+                episodes.append(split_pages)
+                pages.extend(split_pages)
+            except Exception as e:
+                print(f"Error processing document {item.get_name()}: {e}")
     
     cover_data = extract_cover(book_path)
     
@@ -1021,6 +970,81 @@ def delete_bookmark():
             save_bookmarks(bookmarks)
             return jsonify({'success': True})
     return jsonify({'success': False, 'message': 'Bookmark not found'}), 404
+
+
+
+def extract_cover(epub_path):
+    try:
+        book = epub.read_epub(epub_path)
+        # Try to find the cover image
+        for item in book.get_items():
+            if item.get_type() == ebooklib.ITEM_COVER or \
+               item.get_type() == ebooklib.ITEM_IMAGE:
+                # Convert image data to base64 for displaying in HTML
+                image_data = base64.b64encode(item.get_content()).decode('utf-8')
+                return f"data:image/jpeg;base64,{image_data}"
+        return None
+    except Exception as e:
+        print(f"Error processing EPUB: {e} - File: {epub_path}")
+        return None
+    
+def has_books():
+    return any(f.endswith('.epub') for f in os.listdir(BOOK_DIR))
+@app.route('/books')
+def books():
+    books = []
+    finished_books = load_finished_books()
+    
+    for filename in os.listdir(BOOK_DIR):
+        if allowed_file(filename):
+            book_path = os.path.join(BOOK_DIR, filename)
+            cover_data = extract_cover(book_path)
+            title = filename[:-5]  # remove .epub
+            books.append({
+                "title": title,
+                "cover": cover_data,
+                "filename": filename,
+                "finished": title in finished_books,
+                "finished_date": finished_books.get(title, None)
+            })
+    
+    # Sort books: unfinished first, then finished
+    books.sort(key=lambda x: (x['finished'], x['title'].lower()))
+    
+    return render_template('books.html', books=books)
+
+@app.route('/toggle_finished/<path:book_title>', methods=['POST'])
+def toggle_finished(book_title):
+    finished_books = load_finished_books()
+    
+    if book_title in finished_books:
+        del finished_books[book_title]
+        is_finished = False
+        finished_date = None
+    else:
+        finished_books[book_title] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        is_finished = True
+        finished_date = finished_books[book_title]
+    
+    save_finished_books(finished_books)
+    
+    return jsonify({
+        "success": True,
+        "is_finished": is_finished,
+        "finished_date": finished_date
+    })
+
+@app.route('/books/<path:filename>')
+def serve_book(filename):
+    if not allowed_file(filename):
+        abort(404)
+    return send_from_directory(BOOK_DIR, filename)
+
+
+
+
+
+#### Manifest ####
 
 @app.route('/manifest.json')
 def manifest():
