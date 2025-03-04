@@ -527,6 +527,9 @@ def load_notebook_pages():
                         pages.append(page_data)
                 except Exception as e:
                     print(f"Error loading notebook page {filename}: {e}")
+    
+    # Sort pages by updatedAt in descending order (newest first)
+    pages.sort(key=lambda x: x.get('updatedAt', ''), reverse=True)
     return pages
 
 

@@ -69,6 +69,9 @@
     }
     .create-btn {
         background: #4a9eff;
+        position: fixed;
+        top: 20px;
+        right: 20px;
         color: white;
         padding: 12px 25px;
         border: none;
@@ -83,20 +86,13 @@
     .create-btn:hover {
         background: #357abd;
     }
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 25px;
-    }
+  
 {% endblock %}
 
 {% block content %}
-    <div class="header">
         <button class="create-btn" onclick="createPage()">
-            <span>+</span> Create New Page
+            <span>+</span> 
         </button>
-    </div>
     
     <div class="page-grid">
         {% for page in pages %}
