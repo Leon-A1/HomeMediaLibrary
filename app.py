@@ -289,7 +289,7 @@ def stream_music(filename):
 
 @app.route('/photos')
 def photos():
-    return render_template('photos.html')
+    return render_template('photos.html', **get_back_context())
 
 @app.route('/api/photos')
 def get_photos():
@@ -534,11 +534,10 @@ def load_notebook_pages():
 
 @app.route('/notebook')
 def notebook():
-    if not check_auth():
-        return render_template('login.html')
     pages = load_notebook_pages()
-    pages.sort(key=lambda x: x['createdAt'], reverse=True)
-    return render_template('notebook.html', pages=pages)
+    return render_template('notebook.html', 
+                         pages=pages, 
+                         **get_back_context(show_back=True))
 
 @app.route('/notebook/create', methods=['POST'])
 def create_page():
@@ -586,16 +585,13 @@ def create_page():
 
 @app.route('/notebook/<name>')
 def get_page(name):
-    filename = f"{name}.json"
-    filepath = os.path.join(NOTEBOOK_DIR, filename)
-
-    if not os.path.exists(filepath):
+    pages = load_notebook_pages()
+    page = next((p for p in pages if p['name'] == name), None)
+    if page is None:
         abort(404)
-
-    with open(filepath, 'r') as f:
-        page = json.load(f)
-
-    return render_template('notebook_page.html', page=page)
+    return render_template('notebook_page.html', 
+                         page=page, 
+                         **get_back_context(back_url='/notebook'))
 
 @app.route('/notebook/<name>', methods=['POST'])
 def update_page(name):
@@ -740,7 +736,7 @@ def download_from_youtube(url, format_type, download_id, folder):
 
 @app.route('/youtube-downloader')
 def youtube_downloader():
-    return render_template('youtube_downloader.html')
+    return render_template('youtube_downloader.html', **get_back_context())
 
 @app.route('/download', methods=['POST'])
 def download():
@@ -811,8 +807,10 @@ def get_music_folders():
 def read_book(filename):
     if not allowed_file(filename):
         abort(404)
-    title = filename[:-5]  # remove .epub
-    return render_template('reader.html', filename=filename, title=title)
+    return render_template('reader.html', 
+                         filename=filename, 
+                         title=os.path.splitext(filename)[0],
+                         **get_back_context(back_url='/books'))
 
 @app.route('/book-content/<path:filename>')
 def get_book_content(filename):
@@ -1174,7 +1172,9 @@ def books():
     # Sort books: unfinished first, then finished
     books.sort(key=lambda x: (x['finished'], x['title'].lower()))
     
-    return render_template('books.html', books=books)
+    return render_template('books.html', 
+                         books=books,
+                         **get_back_context(show_back=True))
 
 @app.route('/toggle_finished/<path:book_title>', methods=['POST'])
 def toggle_finished(book_title):
@@ -1378,6 +1378,13 @@ def reset_shuffle():
             'success': False,
             'message': f'Error resetting shuffle history: {str(e)}'
         }), 500
+
+def get_back_context(show_back=True, back_url='/'):
+    """Helper function to provide consistent back button context"""
+    return {
+        'show_back': show_back,
+        'back_url': back_url
+    }
 
 if __name__ == '__main__':
     print("Starting server...")

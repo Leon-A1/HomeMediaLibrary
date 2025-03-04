@@ -1,86 +1,78 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="icon" type="image/svg+xml" 
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='16' y='28' width='32' height='24' rx='4' fill='none' stroke='%23000' stroke-width='4'/%3E%3Cpath d='M20 28V20C20 12 24 8 32 8C40 8 44 12 44 20V28' fill='none' stroke='%23000' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='40' r='4' fill='%23000'/%3E%3C/svg%3E">
-    <style>
-        :root {
-            --bg-color: #000;
-            --card-bg: #2d2d2d;
-            --text-color: #ffffff;
-        }
+{% extends "layout.html" %}
 
-        body {
-            margin: 0;
-            padding: 20px;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 70vh;
-        }
+{% block title %}Login{% endblock %}
 
+{% block favicon %}
+<link rel="icon" type="image/svg+xml" 
+href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='16' y='28' width='32' height='24' rx='4' fill='none' stroke='%23000' stroke-width='4'/%3E%3Cpath d='M20 28V20C20 12 24 8 32 8C40 8 44 12 44 20V28' fill='none' stroke='%23000' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='40' r='4' fill='%23000'/%3E%3C/svg%3E">
+{% endblock %}
+
+{% block content_margin %}0{% endblock %}
+
+{% block additional_styles %}
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 70vh;
+    }
+    
+    .login-container {
+        background-color: var(--card-bg);
+        padding: 30px;
+        border-radius: 10px;
+        width: 300px;
+    }
+
+    .login-container h2 {
+        margin-top: 0;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        background-color: #404040;
+        color: var(--text-color);
+        box-sizing: border-box;
+    }
+
+    button {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        background-color: #4CAF50;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    button:hover {
+        background-color: #45a049;
+    }
+
+    .error-message {
+        color: #ff4444;
+        text-align: center;
+        margin-top: 10px;
+        display: none;
+    }
+
+    @media (max-width: 600px) {
         .login-container {
-            background-color: var(--card-bg);
-            padding: 30px;
-            border-radius: 10px;
-            width: 300px;
-        }
-
-        .login-container h2 {
-            margin-top: 0;
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        input[type="password"] {
             width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            background-color: #404040;
-            color: var(--text-color);
-            box-sizing: border-box;
         }
+    }
+{% endblock %}
 
-        button {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            background-color: #4CAF50;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        .error-message {
-            color: #ff4444;
-            text-align: center;
-            margin-top: 10px;
-            display: none;
-        }
-
-        @media (max-width: 600px) {
-            .login-container {
-                width: 100%;
-            }
-        }
-    </style>
-</head>
-<body>
+{% block content %}
     <div class="login-container">
         <h2>Protected Content</h2>
         <div class="form-group">
@@ -89,7 +81,9 @@
         <button onclick="login()">Login</button>
         <div id="error-message" class="error-message">Invalid password</div>
     </div>
+{% endblock %}
 
+{% block scripts %}
     <script>
         function login() {
             const password = document.getElementById('password').value;
@@ -117,5 +111,4 @@
             }
         });
     </script>
-</body>
-</html> 
+{% endblock %} 
