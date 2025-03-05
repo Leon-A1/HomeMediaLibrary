@@ -23,6 +23,9 @@
     .button-group {
         display: flex;
         gap: 10px;
+        position: absolute;
+        right: 20px;
+        top: 20px;
     }
     .button {
         background: #4a9eff;
@@ -58,7 +61,7 @@
         border: none;
         font-family: inherit;
         font-size: inherit;
-        line-height: 1.6;
+        line-height: 1.1;
         resize: none;
         padding: 0;
     }
@@ -153,9 +156,9 @@
 
     <div id="titleContainer">
         <h1 id="pageTitle">{{ page.name }}</h1>
-        <div id="renameContainer" style="display: none; margin-bottom: 15px;">
+        <div id="renameContainer" style="display: none; margin-bottom: 15px; max-width: 350px;">
             <input type="text" id="newPageName" value="{{ page.name }}" class="rename-input">
-            <div class="button-group" style="margin-top: 10px;">
+            <div class="button-group" style="margin-top: 40px;">
                 <button onclick="renamePage()" class="button">Save Name</button>
                 <button onclick="toggleRename()" class="button cancel">Cancel</button>
             </div>
@@ -189,7 +192,7 @@
             <button class="format-btn" data-command="createLink" onclick="createLink()">🔗 Link</button>
         </div>
         <div id="editor" contenteditable="true">{{ page.content|safe }}</div>
-        <div class="button-group" style="margin-top: 20px;">
+        <div class="button-group" style="margin-top: 40px;">
             <button onclick="savePage()" class="button">Save Changes</button>
             <button onclick="toggleEdit()" class="button cancel">Cancel</button>
         </div>
