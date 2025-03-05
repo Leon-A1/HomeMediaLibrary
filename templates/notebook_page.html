@@ -194,6 +194,10 @@
                 🎤
                 <span class="tooltiptext">Dictate (Ctrl+M)</span>
             </button>
+            <button class="format-btn tooltip" onclick="toggleContinuousMode()" id="continuousBtn">
+                🔄 Auto
+                <span class="tooltiptext">Continuous recording with pause detection</span>
+            </button>
         </div>
         <div id="editor" contenteditable="true">{{ page.content|safe }}</div>
         <div class="button-group" style="margin-top: 40px;">
@@ -209,20 +213,45 @@
         let mediaRecorder = null;
         let audioChunks = [];
         let isRecording = false;
+        let audioContext = null;
+        let analyser = null;
+        let audioStream = null;
+        let silenceDetectionInterval = null;
+        let silenceStart = null;
+        // let silenceThreshold = 0.01; // Threshold for determining silence
+        let silenceThreshold = 0.03; // Threshold for determining silence
+        let pauseDetectionDelay = 2500; // Silence duration in ms before considered a pause
+        let continuousMode = false; // Flag for continuous recording mode
+
 
         function toggleRecording() {
             const micBtn = document.getElementById('micBtn');
             if (!isRecording) {
-                startRecording();
+                startRecording(true);
             } else {
                 stopRecording();
             }
         }
 
-        async function startRecording() {
+        function toggleContinuousMode() {
+            continuousMode = !continuousMode;
+            const contBtn = document.getElementById('continuousBtn');
+            contBtn.style.background = continuousMode ? 'var(--primary-color)' : 'transparent';
+            
+            if (isRecording) {
+                // If already recording, restart with new mode
+                stopRecording();
+                // setTimeout(() => startRecording(true), 100);
+                setTimeout(() => startRecording(true), 100);
+            }else{
+                startRecording(true)
+            }
+        }
+
+        async function startRecording(userInitiated = false) {
             try {
                 console.log('Requesting microphone access...');
-                const stream = await navigator.mediaDevices.getUserMedia({ 
+                audioStream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         echoCancellation: true,
                         noiseSuppression: true
@@ -230,7 +259,12 @@
                 });
                 console.log('Microphone access granted');
 
-                mediaRecorder = new MediaRecorder(stream, {
+                // Set up audio analysis for silence detection if in continuous mode
+                if (continuousMode) {
+                    setupAudioAnalysis(audioStream);
+                }
+
+                mediaRecorder = new MediaRecorder(audioStream, {
                     mimeType: 'audio/webm;codecs=opus'
                 });
                 audioChunks = [];
@@ -243,7 +277,16 @@
                 mediaRecorder.onstop = async () => {
                     console.log('Recording stopped, processing audio...');
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    await sendAudioForTranscription(audioBlob);
+                    
+                    // Only process if there's actual data
+                    if (audioBlob.size > 0) {
+                        await sendAudioForTranscription(audioBlob);
+                    }
+                    
+                    // If in continuous mode and not manually stopped by user, restart recording
+                    if (continuousMode && isRecording) {
+                        startRecording(false);
+                    }
                 };
 
                 mediaRecorder.onerror = (event) => {
@@ -253,7 +296,8 @@
 
                 mediaRecorder.start();
                 isRecording = true;
-                micBtn.classList.add('active');
+                const micBtn = document.getElementById('micBtn');
+                // micBtn.classList.add('active');
                 micBtn.style.background = '#ff4a4a';
                 console.log('Recording started');
             } catch (error) {
@@ -268,13 +312,89 @@
             }
         }
 
-        function stopRecording() {
+        function setupAudioAnalysis(stream) {
+            // Create audio context and analyzer
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            
+            // Connect the audio stream to the analyzer
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            
+            // Configure analyzer
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            // Start silence detection
+            silenceDetectionInterval = setInterval(() => {
+                analyser.getByteFrequencyData(dataArray);
+                
+                // Calculate average volume level
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / bufferLength / 255;
+                
+                // Detect silence
+                if (average < silenceThreshold) {
+                    if (!silenceStart) {
+                        silenceStart = Date.now();
+                    } else if (Date.now() - silenceStart > pauseDetectionDelay) {
+                        console.log('Pause detected, splitting recording');
+                        
+                        // Only proceed if we're still recording
+                        if (mediaRecorder && mediaRecorder.state === 'recording') {
+                            // Stop current recording
+                            mediaRecorder.stop();
+                            
+                            // Reset silence detection
+                            silenceStart = null;
+                        }
+                    }
+                } else {
+                    // Reset silence start time if sound detected
+                    silenceStart = null;
+                }
+            }, 100);
+        }
+
+        function stopRecording(userInitiated = true) {
             if (mediaRecorder && isRecording) {
                 console.log('Stopping recording...');
+                
+                // Stop audio analysis
+                if (silenceDetectionInterval) {
+                    clearInterval(silenceDetectionInterval);
+                    silenceDetectionInterval = null;
+                }
+                
+                if (audioContext) {
+                    audioContext.close().then(() => {
+                        console.log("Audio context closed");
+                    });
+                    audioContext = null;
+                    analyser = null;
+                }
+                
+                // Stop media recorder
                 mediaRecorder.stop();
-                isRecording = false;
-                micBtn.classList.remove('active');
-                micBtn.style.background = '';
+                
+                // Only update UI and state if user manually stopped recording
+                if (userInitiated) {
+                    isRecording = false;
+                    const micBtn = document.getElementById('micBtn');
+                    // micBtn.classList.remove('active');
+                    micBtn.style.background = '';
+                    
+                    // Close audio tracks
+                    if (audioStream) {
+                        audioStream.getTracks().forEach(track => track.stop());
+                        audioStream = null;
+                    }
+                }
+                
                 console.log('Recording stopped');
             }
         }
@@ -284,7 +404,6 @@
                 // Check if the audio blob is empty
                 if (audioBlob.size === 0) {
                     console.error('No audio data recorded');
-                    alert('No audio was recorded. Please try again.');
                     return;
                 }
 
