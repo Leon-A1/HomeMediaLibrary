@@ -219,10 +219,13 @@
         let silenceDetectionInterval = null;
         let silenceStart = null;
         // let silenceThreshold = 0.01; // Threshold for determining silence
-        let silenceThreshold = 0.03; // Threshold for determining silence
-        let pauseDetectionDelay = 2500; // Silence duration in ms before considered a pause
+        let silenceThreshold = 0.05; // Increased from 0.03 for better pause detection
+        let pauseDetectionDelay = 3000; // Increased from 1500ms to 3000ms
         let continuousMode = false; // Flag for continuous recording mode
-
+        let pendingAudioBlobs = []; // Store audio segments for batch processing
+        let processingTranscription = false; // Flag to prevent overlapping transcription requests
+        let visualizationCanvas = null;
+        let canvasContext = null;
 
         function toggleRecording() {
             const micBtn = document.getElementById('micBtn');
@@ -241,20 +244,25 @@
             if (isRecording) {
                 // If already recording, restart with new mode
                 stopRecording();
-                // setTimeout(() => startRecording(true), 100);
                 setTimeout(() => startRecording(true), 100);
-            }else{
-                startRecording(true)
+            } else {
+                startRecording(true);
             }
         }
 
         async function startRecording(userInitiated = false) {
             try {
+                // Clear any pending audio blobs when starting a new recording session
+                if (userInitiated) {
+                    pendingAudioBlobs = [];
+                }
+                
                 console.log('Requesting microphone access...');
                 audioStream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         echoCancellation: true,
-                        noiseSuppression: true
+                        noiseSuppression: true,
+                        autoGainControl: true
                     } 
                 });
                 console.log('Microphone access granted');
@@ -262,10 +270,12 @@
                 // Set up audio analysis for silence detection if in continuous mode
                 if (continuousMode) {
                     setupAudioAnalysis(audioStream);
+                    setupAudioVisualization();
                 }
 
                 mediaRecorder = new MediaRecorder(audioStream, {
-                    mimeType: 'audio/webm;codecs=opus'
+                    mimeType: 'audio/webm;codecs=opus',
+                    audioBitsPerSecond: 128000 // Higher bitrate for better quality
                 });
                 audioChunks = [];
 
@@ -280,7 +290,21 @@
                     
                     // Only process if there's actual data
                     if (audioBlob.size > 0) {
-                        await sendAudioForTranscription(audioBlob);
+                        if (continuousMode) {
+                            // Add to pending blobs for batch processing
+                            pendingAudioBlobs.push(audioBlob);
+                            
+                            // Process accumulated audio if not currently processing and if either:
+                            // 1. User manually stopped recording, or
+                            // 2. We've accumulated enough segments (3 or more)
+                            if (!processingTranscription && 
+                                (!isRecording || pendingAudioBlobs.length >= 3)) {
+                                await processPendingAudio();
+                            }
+                        } else {
+                            // For manual recording, process immediately
+                            await sendAudioForTranscription(audioBlob);
+                        }
                     }
                     
                     // If in continuous mode and not manually stopped by user, restart recording
@@ -297,7 +321,6 @@
                 mediaRecorder.start();
                 isRecording = true;
                 const micBtn = document.getElementById('micBtn');
-                // micBtn.classList.add('active');
                 micBtn.style.background = '#ff4a4a';
                 console.log('Recording started');
             } catch (error) {
@@ -312,6 +335,35 @@
             }
         }
 
+        // Function to process accumulated audio blobs
+        async function processPendingAudio() {
+            if (pendingAudioBlobs.length === 0 || processingTranscription) {
+                return;
+            }
+            
+            processingTranscription = true;
+            
+            try {
+                console.log(`Processing ${pendingAudioBlobs.length} pending audio segments`);
+                
+                // Combine all pending audio blobs into one
+                const combinedBlob = new Blob(pendingAudioBlobs, { type: 'audio/webm' });
+                pendingAudioBlobs = []; // Clear the pending queue
+                
+                // Process the combined audio
+                await sendAudioForTranscription(combinedBlob);
+            } catch (error) {
+                console.error('Error processing pending audio:', error);
+            } finally {
+                processingTranscription = false;
+                
+                // If there are new blobs that arrived during processing, process them too
+                if (pendingAudioBlobs.length > 0 && !isRecording) {
+                    setTimeout(processPendingAudio, 100);
+                }
+            }
+        }
+
         function setupAudioAnalysis(stream) {
             // Create audio context and analyzer
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -321,23 +373,45 @@
             const source = audioContext.createMediaStreamSource(stream);
             source.connect(analyser);
             
-            // Configure analyzer
-            analyser.fftSize = 256;
+            // Configure analyzer with more accurate settings
+            analyser.fftSize = 1024; // Increased from 256 for more detailed analysis
+            analyser.smoothingTimeConstant = 0.5; // Add smoothing to prevent rapid fluctuations
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
             
-            // Start silence detection
+            // Start silence detection with improved algorithm
             silenceDetectionInterval = setInterval(() => {
                 analyser.getByteFrequencyData(dataArray);
                 
-                // Calculate average volume level
+                // Calculate average volume level with improved weighting for speech frequencies
                 let sum = 0;
-                for (let i = 0; i < bufferLength; i++) {
-                    sum += dataArray[i];
-                }
-                const average = sum / bufferLength / 255;
+                let speechFrequencyWeight = 0;
                 
-                // Detect silence
+                // Give more weight to frequencies in human speech range (roughly 300-3000 Hz)
+                for (let i = 0; i < bufferLength; i++) {
+                    // Approximate frequency calculation
+                    const frequency = i * audioContext.sampleRate / analyser.fftSize;
+                    
+                    // Weight speech frequencies more heavily
+                    let weight = 1.0;
+                    if (frequency > 300 && frequency < 3000) {
+                        weight = 1.5;
+                        speechFrequencyWeight += weight;
+                    }
+                    
+                    sum += dataArray[i] * weight;
+                }
+                
+                // Normalize with proper weighting
+                const weightedDivisor = bufferLength + (speechFrequencyWeight - bufferLength);
+                const average = sum / weightedDivisor / 255;
+                
+                // Update visualization
+                if (visualizationCanvas) {
+                    updateVisualization(dataArray);
+                }
+                
+                // Detect silence with improved algorithm
                 if (average < silenceThreshold) {
                     if (!silenceStart) {
                         silenceStart = Date.now();
@@ -358,6 +432,47 @@
                     silenceStart = null;
                 }
             }, 100);
+        }
+
+        function setupAudioVisualization() {
+            // Create visualization canvas if it doesn't exist
+            if (!visualizationCanvas) {
+                visualizationCanvas = document.createElement('canvas');
+                visualizationCanvas.width = 300;
+                visualizationCanvas.height = 50;
+                visualizationCanvas.style.marginBottom = '10px';
+                visualizationCanvas.style.borderRadius = '4px';
+                visualizationCanvas.style.backgroundColor = '#404040';
+                
+                // Insert before the editor
+                const editorDiv = document.getElementById('editor');
+                editorDiv.parentNode.insertBefore(visualizationCanvas, editorDiv);
+                
+                canvasContext = visualizationCanvas.getContext('2d');
+            }
+        }
+
+        function updateVisualization(dataArray) {
+            const width = visualizationCanvas.width;
+            const height = visualizationCanvas.height;
+            
+            canvasContext.clearRect(0, 0, width, height);
+            
+            // Draw silence threshold line
+            canvasContext.strokeStyle = '#ff4a4a';
+            canvasContext.beginPath();
+            canvasContext.moveTo(0, height - (silenceThreshold * height));
+            canvasContext.lineTo(width, height - (silenceThreshold * height));
+            canvasContext.stroke();
+            
+            // Draw volume levels
+            canvasContext.fillStyle = '#4a9eff';
+            const barWidth = width / analyser.frequencyBinCount;
+            
+            for (let i = 0; i < analyser.frequencyBinCount; i++) {
+                const barHeight = dataArray[i] / 255 * height;
+                canvasContext.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
+            }
         }
 
         function stopRecording(userInitiated = true) {
@@ -385,13 +500,22 @@
                 if (userInitiated) {
                     isRecording = false;
                     const micBtn = document.getElementById('micBtn');
-                    // micBtn.classList.remove('active');
                     micBtn.style.background = '';
                     
                     // Close audio tracks
                     if (audioStream) {
                         audioStream.getTracks().forEach(track => track.stop());
                         audioStream = null;
+                    }
+                    
+                    // Process any remaining audio immediately
+                    setTimeout(processPendingAudio, 100);
+                    
+                    // Remove visualization
+                    if (visualizationCanvas) {
+                        visualizationCanvas.remove();
+                        visualizationCanvas = null;
+                        canvasContext = null;
                     }
                 }
                 
@@ -407,10 +531,23 @@
                     return;
                 }
 
+                // Show a subtle processing indicator
+                const editor = document.getElementById('editor');
+                const processingIndicator = document.createElement('div');
+                processingIndicator.textContent = 'Processing audio...';
+                processingIndicator.style.color = '#4a9eff';
+                processingIndicator.style.fontStyle = 'italic';
+                processingIndicator.style.margin = '5px 0';
+                processingIndicator.style.padding = '5px';
+                processingIndicator.style.borderRadius = '4px';
+                processingIndicator.style.backgroundColor = 'rgba(74, 158, 255, 0.1)';
+                editor.parentNode.insertBefore(processingIndicator, editor.nextSibling);
+
                 const formData = new FormData();
                 // Create a new File object from the Blob with a proper filename
                 const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
                 formData.append('audio', audioFile);
+                formData.append('size', audioBlob.size.toString()); // Add size for debugging
 
                 console.log('Sending audio for transcription, size:', audioBlob.size);
                 const response = await fetch('/transcribe', {
@@ -425,24 +562,65 @@
                 const data = await response.json();
                 console.log('Transcription response:', data);
 
+                // Remove the processing indicator
+                processingIndicator.remove();
+
                 if (data.success) {
                     // Insert the transcribed text at the cursor position
                     const editor = document.getElementById('editor');
                     const selection = window.getSelection();
                     const range = selection.getRangeAt(0);
-                    const textNode = document.createTextNode(data.text + ' ');
-                    range.insertNode(textNode);
-                    range.setStartAfter(textNode);
-                    range.setEndAfter(textNode);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                    editor.focus();
+                    
+                    // Process the text to capitalize first letter of sentences
+                    let text = data.text.trim();
+                    if (text) {
+                        // Capitalize first letter
+                        text = text.charAt(0).toUpperCase() + text.slice(1);
+                        
+                        // Add appropriate punctuation if missing
+                        if (!text.match(/[.!?]$/)) {
+                            text += '.';
+                        }
+                        
+                        // Add space after the text
+                        text += ' ';
+                        
+                        const textNode = document.createTextNode(text);
+                        range.insertNode(textNode);
+                        range.setStartAfter(textNode);
+                        range.setEndAfter(textNode);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                        editor.focus();
+                    }
                 } else {
-                    alert(data.message || 'Error transcribing audio');
+                    console.error('Transcription error:', data.message);
+                    const errorMsg = document.createElement('div');
+                    errorMsg.textContent = data.message || 'Error transcribing audio';
+                    errorMsg.style.color = '#ff4a4a';
+                    errorMsg.style.margin = '5px 0';
+                    errorMsg.style.padding = '5px';
+                    errorMsg.style.borderRadius = '4px';
+                    errorMsg.style.backgroundColor = 'rgba(255, 74, 74, 0.1)';
+                    editor.parentNode.insertBefore(errorMsg, editor.nextSibling);
+                    
+                    // Remove error message after 5 seconds
+                    setTimeout(() => errorMsg.remove(), 5000);
                 }
             } catch (error) {
                 console.error('Error sending audio for transcription:', error);
-                alert('Error transcribing audio. Please try again.');
+                const editor = document.getElementById('editor');
+                const errorMsg = document.createElement('div');
+                errorMsg.textContent = 'Error transcribing audio. Please try again.';
+                errorMsg.style.color = '#ff4a4a';
+                errorMsg.style.margin = '5px 0';
+                errorMsg.style.padding = '5px';
+                errorMsg.style.borderRadius = '4px';
+                errorMsg.style.backgroundColor = 'rgba(255, 74, 74, 0.1)';
+                editor.parentNode.insertBefore(errorMsg, editor.nextSibling);
+                
+                // Remove error message after 5 seconds
+                setTimeout(() => errorMsg.remove(), 5000);
             }
         }
 
