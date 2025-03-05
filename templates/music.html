@@ -298,6 +298,7 @@
                 </option>
             {% endfor %}
         </select>
+        <input type="text" id="searchInput" placeholder="Search songs..." style="margin: 20px; padding: 10px; font-size: 16px; width: 200px; color-scheme: dark;">
     </div>
     <div id="controls">
         <div class="toggle-container">
@@ -359,6 +360,47 @@
         let songList = {{ music_files| tojson }};
         let currentFolder = 'Downloads';
         let playedSongs = new Set();
+        let searchQuery = '';
+        let searchTimeout = null;
+
+        // Add search functionality with debouncing
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', function() {
+            searchQuery = this.value.toLowerCase();
+            
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Set new timeout
+            searchTimeout = setTimeout(() => {
+                if (searchQuery) {
+                    // Perform search using the backend endpoint
+                    fetch(`/search_music?q=${encodeURIComponent(searchQuery)}&folder=${encodeURIComponent(currentFolder)}`)
+                        .then(response => response.json())
+                        .then(filteredFiles => {
+                            updatePlaylist(filteredFiles);
+                        })
+                        .catch(error => {
+                            console.error('Search error:', error);
+                            // Fallback to client-side filtering if server request fails
+                            const currentFiles = songList.map(song => song.split('/').pop());
+                            const filteredFiles = currentFiles.filter(file => 
+                                file.toLowerCase().includes(searchQuery)
+                            );
+                            updatePlaylist(filteredFiles);
+                        });
+                } else {
+                    // If search is empty, show all files
+                    const response = fetch(`/folder/${currentFolder}`);
+                    response.then(r => r.json())
+                        .then(files => {
+                            updatePlaylist(files);
+                        });
+                }
+            }, 300); // Wait 300ms after user stops typing
+        });
 
         shuffleToggle.addEventListener('change', () => {
             shuffleMode = shuffleToggle.checked;

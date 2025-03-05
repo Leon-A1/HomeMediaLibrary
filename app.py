@@ -18,6 +18,7 @@ import html
 import random
 import re
 import urllib
+from mutagen.id3 import ID3
 
 
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
@@ -240,19 +241,19 @@ def index():
 @app.route('/music')
 def music():
     # Get folders and their file counts
-    # Use Downloads folder as root folder
-    folders = ['Downloads']  # Empty string represents root Music folder
+    folders = ['Downloads']  # Downloads as first folder option
     folder_counts = {}
-    downloads_folder_path = MUSIC_DIR + '/Downloads'
-    # Count files in root folder
+    
+    # Count files in Downloads folder
+    downloads_folder_path = os.path.join(MUSIC_DIR, 'Downloads')
     root_files = [f for f in os.listdir(downloads_folder_path) 
                   if os.path.isfile(os.path.join(downloads_folder_path, f)) 
                   and f.lower().endswith(('.mp3', '.wav', '.flac', '.aac'))]
     folder_counts['Downloads'] = len(root_files)
-    print(folder_counts['Downloads'])
-    # Count files in subfolders
+    
+    # Get other folders from Music directory
     for item in os.listdir(MUSIC_DIR):
-        if(item == "Downloads"):
+        if item == "Downloads":
             continue
         if os.path.isdir(os.path.join(MUSIC_DIR, item)):
             folders.append(item)
@@ -262,11 +263,59 @@ def music():
                     and f.lower().endswith(('.mp3', '.wav', '.flac', '.aac'))]
             folder_counts[item] = len(files)
     
+    # Get music files from Downloads folder for initial display
+    music_files = root_files
+    
     return render_template('music.html', 
-                         music_files=root_files, 
-                         folders=folders, 
-                         folder_counts=folder_counts, 
-                         current_folder='')
+                         music_files=music_files,
+                         folders=folders,
+                         folder_counts=folder_counts)
+
+@app.route('/search_music')
+def search_music():
+    query = request.args.get('q', '').lower()
+    folder = request.args.get('folder', 'Downloads')
+    
+    # Determine the folder path
+    folder_path = os.path.join(MUSIC_DIR, folder)
+    
+    if not os.path.exists(folder_path):
+        return jsonify([])
+    
+    # Get all music files in the folder
+    music_files = [f for f in os.listdir(folder_path) 
+                  if f.lower().endswith(('.mp3', '.wav', '.flac', '.aac'))]
+    
+    # Filter files based on search query
+    filtered_files = []
+    for file in music_files:
+        # Check filename
+        if query in file.lower():
+            filtered_files.append(file)
+            continue
+            
+        # Check file metadata if it's an MP3
+        if file.lower().endswith('.mp3'):
+            try:
+                file_path = os.path.join(folder_path, file)
+                audio = ID3(file_path)
+                if audio:
+                    # Check title
+                    if audio.get('TIT2') and query in audio['TIT2'].text[0].lower():
+                        filtered_files.append(file)
+                        continue
+                    # Check artist
+                    if audio.get('TPE1') and query in audio['TPE1'].text[0].lower():
+                        filtered_files.append(file)
+                        continue
+                    # Check album
+                    if audio.get('TALB') and query in audio['TALB'].text[0].lower():
+                        filtered_files.append(file)
+                        continue
+            except Exception:
+                pass  # Skip if metadata can't be read
+    
+    return jsonify(filtered_files)
 
 @app.route('/folder/<path:folder_name>')
 def get_folder_contents(folder_name):
@@ -1388,6 +1437,23 @@ def get_back_context(show_back=True, back_url='/'):
         'show_back': show_back,
         'back_url': back_url
     }
+
+@app.route('/notebook/search')
+def search_notebook():
+    query = request.args.get('q', '').lower()
+    if not query:
+        return jsonify([])
+    
+    pages = load_notebook_pages()
+    matching_pages = []
+    
+    for page in pages:
+        # Search in both name and content
+        if (query in page['name'].lower() or 
+            query in page.get('content', '').lower()):
+            matching_pages.append(page)
+    
+    return jsonify(matching_pages)
 
 if __name__ == '__main__':
     print("Starting server...")

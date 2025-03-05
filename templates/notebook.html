@@ -86,15 +86,49 @@
     .create-btn:hover {
         background: #357abd;
     }
-  
+
+    .search-container {
+        position: relative;
+        margin: 20px auto;
+        max-width: 600px;
+        width: 100%;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 1em;
+        background: #2c2c2c;
+        border: 1px solid #404040;
+        border-radius: 8px;
+        color: white;
+        transition: border-color 0.2s;
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: #4a9eff;
+    }
+    
+    .search-input::placeholder {
+        color: #666;
+    }
 {% endblock %}
 
 {% block content %}
-        <button class="create-btn" onclick="createPage()">
-            <span>+</span> 
-        </button>
-    
-    <div class="page-grid">
+    <div class="search-container">
+        <input type="text" 
+               class="search-input" 
+               placeholder="Search pages..." 
+               id="searchInput"
+               autocomplete="off">
+    </div>
+
+    <button class="create-btn" onclick="createPage()">
+        <span>+</span> 
+    </button>
+
+    <div class="page-grid" id="pageGrid">
         {% for page in pages %}
         <a href="/notebook/{{ page.name }}" class="page-card">
             <h3>{{ page.name }}</h3>
@@ -121,6 +155,41 @@
                     }
                 });
         }
+
+        // Add search functionality
+        const searchInput = document.getElementById('searchInput');
+        const pageGrid = document.getElementById('pageGrid');
+        let debounceTimeout;
+
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                const query = e.target.value.trim();
+                if (query) {
+                    fetch(`/notebook/search?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(pages => {
+                            pageGrid.innerHTML = pages.map(page => `
+                                <a href="/notebook/${page.name}" class="page-card">
+                                    <h3>${page.name}</h3>
+                                    <div class="date-info">
+                                        Created: ${page.createdAt.split('T')[0]}
+                                        ${page.updatedAt !== page.createdAt ? 
+                                          `<br>Updated: ${page.updatedAt.split('T')[0]}` : 
+                                          ''}
+                                    </div>
+                                    <div class="preview">${page.content ? 
+                                        page.content.replace(/<[^>]*>/g, '').substring(0, 100) : 
+                                        ''}</div>
+                                </a>
+                            `).join('');
+                        });
+                } else {
+                    // If search is empty, reload the page to show all notes
+                    window.location.reload();
+                }
+            }, 300); // Debounce delay of 300ms
+        });
     </script>
 {% endblock %}
 
