@@ -1,4 +1,9 @@
 flask
 ebooklib
 Pillow
-yt_dlp
+yt-dlp
+beautifulsoup4
+mutagen
+faster-whisper
+soundfile
+numpy

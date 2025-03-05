@@ -3,7 +3,6 @@ from flask import Flask, render_template, send_from_directory, abort, jsonify, r
 import ebooklib
 from ebooklib import epub
 from PIL import Image
-import io
 import base64
 import json
 from datetime import datetime
@@ -19,6 +18,9 @@ import random
 import re
 import urllib
 from mutagen.id3 import ID3
+from faster_whisper import WhisperModel
+import tempfile
+import shutil
 
 
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
@@ -1454,6 +1456,126 @@ def search_notebook():
             matching_pages.append(page)
     
     return jsonify(matching_pages)
+
+def check_ffmpeg():
+    """Check if ffmpeg is available in the system PATH"""
+    return shutil.which('ffmpeg') is not None
+
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    print("Received transcription request")
+    if not check_ffmpeg():
+        print("FFmpeg not found in system PATH")
+        return jsonify({
+            'success': False,
+            'message': 'FFmpeg is not installed. Please install FFmpeg to use the dictation feature. '
+                      'You can download it from https://ffmpeg.org/download.html or use a package manager.'
+        })
+
+    if 'audio' not in request.files:
+        print("No audio file in request")
+        return jsonify({'success': False, 'message': 'No audio file provided'})
+    
+    audio_file = request.files['audio']
+    if audio_file.filename == '':
+        print("Empty filename")
+        return jsonify({'success': False, 'message': 'No selected file'})
+    
+    # Read the file content to check if it's empty
+    file_content = audio_file.read()
+    if not file_content:
+        print("Empty audio file")
+        return jsonify({'success': False, 'message': 'The audio file is empty. Please try recording again.'})
+    
+    # Reset file pointer for later use
+    audio_file.seek(0)
+    
+    print(f"Received audio file: {audio_file.filename}, size: {len(file_content)} bytes")
+    input_file = None
+    output_file = None
+    
+    try:
+        # Create temporary files for input and output
+        input_file = tempfile.NamedTemporaryFile(delete=False, suffix='.webm')
+        output_file = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+        
+        # Close the files so they can be used by ffmpeg
+        input_file.close()
+        output_file.close()
+        
+        print(f"Created temporary files: {input_file.name}, {output_file.name}")
+        
+        # Save the uploaded audio
+        audio_file.save(input_file.name)
+        
+        # Verify the file was saved and has content
+        if not os.path.exists(input_file.name) or os.path.getsize(input_file.name) == 0:
+            print("Error: Saved file is empty or does not exist")
+            return jsonify({'success': False, 'message': 'Error saving audio file. Please try again.'})
+            
+        print("Saved uploaded audio file")
+        
+        # Convert WebM to WAV using ffmpeg
+        try:
+            print("Running FFmpeg conversion...")
+            # Add -y flag to overwrite output file if it exists
+            result = subprocess.run([
+                'ffmpeg', '-y', '-i', input_file.name,
+                '-acodec', 'pcm_s16le',
+                '-ar', '16000',
+                '-ac', '1',
+                output_file.name
+            ], check=True, capture_output=True, text=True)
+            print("FFmpeg conversion successful")
+            
+            # Verify the output file exists and has content
+            if not os.path.exists(output_file.name) or os.path.getsize(output_file.name) == 0:
+                print("Error: FFmpeg output file is empty or does not exist")
+                return jsonify({'success': False, 'message': 'Error converting audio. Please try again.'})
+                
+        except subprocess.CalledProcessError as e:
+            print(f"FFmpeg error: {e.stderr}")
+            return jsonify({
+                'success': False,
+                'message': f'Error converting audio: {e.stderr}'
+            })
+        
+        # Initialize the Whisper model
+        print("Initializing Whisper model...")
+        model = WhisperModel("base", device="cpu", compute_type="int8")
+        print("Whisper model initialized")
+        
+        # Transcribe the audio
+        print("Starting transcription...")
+        segments, _ = model.transcribe(output_file.name, beam_size=5)
+        text = " ".join([segment.text for segment in segments])
+        print(f"Transcription complete: {text}")
+        
+        return jsonify({
+            'success': True,
+            'text': text.strip()
+        })
+        
+    except Exception as e:
+        print(f"Error during transcription: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'Error during transcription: {str(e)}'
+        })
+    finally:
+        # Clean up temporary files
+        if input_file and os.path.exists(input_file.name):
+            try:
+                os.unlink(input_file.name)
+            except Exception as e:
+                print(f"Error deleting input file: {e}")
+        if output_file and os.path.exists(output_file.name):
+            try:
+                os.unlink(output_file.name)
+            except Exception as e:
+                print(f"Error deleting output file: {e}")
 
 if __name__ == '__main__':
     print("Starting server...")

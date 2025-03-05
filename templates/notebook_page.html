@@ -63,7 +63,7 @@
         font-size: inherit;
         line-height: 1.1;
         resize: none;
-        padding: 0;
+        padding: 5px;
     }
     .toolbar {
         display: flex;
@@ -190,6 +190,10 @@
             <button class="format-btn" data-command="insertUnorderedList" onclick="formatText('insertUnorderedList')">• List</button>
             <button class="format-btn" data-command="insertOrderedList" onclick="formatText('insertOrderedList')">1. List</button>
             <button class="format-btn" data-command="createLink" onclick="createLink()">🔗 Link</button>
+            <button class="format-btn tooltip" onclick="toggleRecording()" id="micBtn">
+                🎤
+                <span class="tooltiptext">Dictate (Ctrl+M)</span>
+            </button>
         </div>
         <div id="editor" contenteditable="true">{{ page.content|safe }}</div>
         <div class="button-group" style="margin-top: 40px;">
@@ -202,6 +206,135 @@
 {% block scripts %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.0/purify.min.js"></script>
     <script>
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+
+        function toggleRecording() {
+            const micBtn = document.getElementById('micBtn');
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                console.log('Requesting microphone access...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    } 
+                });
+                console.log('Microphone access granted');
+
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    console.log('Data available:', event.data.size, 'bytes');
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    console.log('Recording stopped, processing audio...');
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await sendAudioForTranscription(audioBlob);
+                };
+
+                mediaRecorder.onerror = (event) => {
+                    console.error('MediaRecorder error:', event.error);
+                    alert('Error recording audio: ' + event.error.message);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                micBtn.classList.add('active');
+                micBtn.style.background = '#ff4a4a';
+                console.log('Recording started');
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                if (error.name === 'NotAllowedError') {
+                    alert('Microphone access was denied. Please allow microphone access in your browser settings and try again.');
+                } else if (error.name === 'NotFoundError') {
+                    alert('No microphone found. Please connect a microphone and try again.');
+                } else {
+                    alert('Error accessing microphone: ' + error.message);
+                }
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                console.log('Stopping recording...');
+                mediaRecorder.stop();
+                isRecording = false;
+                micBtn.classList.remove('active');
+                micBtn.style.background = '';
+                console.log('Recording stopped');
+            }
+        }
+
+        async function sendAudioForTranscription(audioBlob) {
+            try {
+                // Check if the audio blob is empty
+                if (audioBlob.size === 0) {
+                    console.error('No audio data recorded');
+                    alert('No audio was recorded. Please try again.');
+                    return;
+                }
+
+                const formData = new FormData();
+                // Create a new File object from the Blob with a proper filename
+                const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
+                formData.append('audio', audioFile);
+
+                console.log('Sending audio for transcription, size:', audioBlob.size);
+                const response = await fetch('/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Transcription response:', data);
+
+                if (data.success) {
+                    // Insert the transcribed text at the cursor position
+                    const editor = document.getElementById('editor');
+                    const selection = window.getSelection();
+                    const range = selection.getRangeAt(0);
+                    const textNode = document.createTextNode(data.text + ' ');
+                    range.insertNode(textNode);
+                    range.setStartAfter(textNode);
+                    range.setEndAfter(textNode);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    editor.focus();
+                } else {
+                    alert(data.message || 'Error transcribing audio');
+                }
+            } catch (error) {
+                console.error('Error sending audio for transcription:', error);
+                alert('Error transcribing audio. Please try again.');
+            }
+        }
+
+        // Add keyboard shortcut for Ctrl+M
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'm') {
+                e.preventDefault();
+                toggleRecording();
+            }
+        });
+
         function toggleEdit() {
             const viewMode = document.getElementById('viewMode');
             const editMode = document.getElementById('editMode');
