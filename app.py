@@ -1471,8 +1471,7 @@ def transcribe_audio():
         print("FFmpeg not found in system PATH")
         return jsonify({
             'success': False,
-            'message': 'FFmpeg is not installed. Please install FFmpeg to use the dictation feature. '
-                      'You can download it from https://ffmpeg.org/download.html or use a package manager.'
+            'message': 'FFmpeg is not installed. Please install FFmpeg to use the dictation feature.'
         })
 
     if 'audio' not in request.files:
@@ -1493,7 +1492,19 @@ def transcribe_audio():
     # Reset file pointer for later use
     audio_file.seek(0)
     
-    print(f"Received audio file: {audio_file.filename}, size: {len(file_content)} bytes")
+    # Get audio file size
+    file_size = len(file_content)
+    print(f"Received audio file: {audio_file.filename}, size: {file_size} bytes")
+    
+    # Skip small files that are likely just background noise
+    if file_size < 10000:  # Less than 10KB
+        print("Audio file too small, likely just background noise")
+        return jsonify({
+            'success': True,
+            'text': '',  # Return empty text
+            'message': 'No speech detected'
+        })
+    
     input_file = None
     output_file = None
     
@@ -1535,6 +1546,35 @@ def transcribe_audio():
             if not os.path.exists(output_file.name) or os.path.getsize(output_file.name) == 0:
                 print("Error: FFmpeg output file is empty or does not exist")
                 return jsonify({'success': False, 'message': 'Error converting audio. Please try again.'})
+            
+            # Check audio level to ensure there's actual speech (optional)
+            try:
+                # Check audio amplitude with ffmpeg
+                level_check = subprocess.run([
+                    'ffmpeg', '-i', output_file.name, 
+                    '-af', 'volumedetect', 
+                    '-f', 'null', 
+                    'NUL'  # Use /dev/null on Unix systems
+                ], capture_output=True, text=True)
+                
+                # Look for mean volume in the output
+                mean_volume_match = re.search(r'mean_volume: ([-\d.]+) dB', level_check.stderr)
+                if mean_volume_match:
+                    mean_volume = float(mean_volume_match.group(1))
+                    print(f"Mean audio volume: {mean_volume} dB")
+                    
+                    # If volume is very low, likely no speech
+                    if mean_volume < -40:  # Typical threshold for silence
+                        print("Audio contains no speech (volume too low)")
+                        return jsonify({
+                            'success': True,
+                            'text': '',
+                            'message': 'No speech detected'
+                        })
+                
+            except Exception as e:
+                print(f"Warning: Could not check audio level: {e}")
+                # Continue anyway since this is just an optional check
                 
         except subprocess.CalledProcessError as e:
             print(f"FFmpeg error: {e.stderr}")
@@ -1550,9 +1590,19 @@ def transcribe_audio():
         
         # Transcribe the audio
         print("Starting transcription...")
-        segments, _ = model.transcribe(output_file.name, beam_size=5)
+        segments, info = model.transcribe(output_file.name, beam_size=5)
+        
+        # Get the transcribed text
         text = " ".join([segment.text for segment in segments])
         print(f"Transcription complete: {text}")
+        
+        # If text is extremely short or just punctuation, consider it as silence
+        if len(text.strip()) <= 2 or text.strip() in ['', '.', '?', '!']:
+            return jsonify({
+                'success': True,
+                'text': '',
+                'message': 'No meaningful speech detected'
+            })
         
         return jsonify({
             'success': True,

@@ -218,14 +218,15 @@
         let audioStream = null;
         let silenceDetectionInterval = null;
         let silenceStart = null;
-        // let silenceThreshold = 0.01; // Threshold for determining silence
         let silenceThreshold = 0.15; // Increased from 0.03 for better pause detection
-        let pauseDetectionDelay = 1500; // Increased from 1500ms to 3000ms
+        let pauseDetectionDelay = 3000; // Increased to 3000ms for better pause detection
+        let minimumAudioDuration = 1000; // Minimum audio duration to process (1 second)
         let continuousMode = false; // Flag for continuous recording mode
         let pendingAudioBlobs = []; // Store audio segments for batch processing
         let processingTranscription = false; // Flag to prevent overlapping transcription requests
         let visualizationCanvas = null;
         let canvasContext = null;
+        let noiseFloor = 0.05; // Threshold to determine if audio contains actual speech
 
         function toggleRecording() {
             const micBtn = document.getElementById('micBtn');
@@ -277,6 +278,7 @@
                     mimeType: 'audio/webm;codecs=opus',
                     audioBitsPerSecond: 128000 // Higher bitrate for better quality
                 });
+                mediaRecorder.startTime = Date.now(); // Track when recording started
                 audioChunks = [];
 
                 mediaRecorder.ondataavailable = (event) => {
@@ -350,6 +352,12 @@
                 const combinedBlob = new Blob(pendingAudioBlobs, { type: 'audio/webm' });
                 pendingAudioBlobs = []; // Clear the pending queue
                 
+                // Skip processing if the audio is too short (likely just background noise)
+                if (combinedBlob.size < 10000) { // Skip very small audio files
+                    console.log("Audio segment too small, likely just background noise. Skipping transcription.");
+                    return;
+                }
+                
                 // Process the combined audio
                 await sendAudioForTranscription(combinedBlob);
             } catch (error) {
@@ -386,11 +394,15 @@
                 // Calculate average volume level with improved weighting for speech frequencies
                 let sum = 0;
                 let speechFrequencyWeight = 0;
+                let maxLevel = 0;
                 
                 // Give more weight to frequencies in human speech range (roughly 300-3000 Hz)
                 for (let i = 0; i < bufferLength; i++) {
                     // Approximate frequency calculation
                     const frequency = i * audioContext.sampleRate / analyser.fftSize;
+                    
+                    // Track maximum level for noise floor detection
+                    maxLevel = Math.max(maxLevel, dataArray[i]/255);
                     
                     // Weight speech frequencies more heavily
                     let weight = 1.0;
@@ -411,15 +423,21 @@
                     updateVisualization(dataArray);
                 }
                 
+                // Check if audio level is above noise floor before considering it speech
+                const hasActualSpeech = maxLevel > noiseFloor;
+                
                 // Detect silence with improved algorithm
-                if (average < silenceThreshold) {
+                if (average < silenceThreshold || !hasActualSpeech) {
                     if (!silenceStart) {
                         silenceStart = Date.now();
                     } else if (Date.now() - silenceStart > pauseDetectionDelay) {
                         console.log('Pause detected, splitting recording');
                         
-                        // Only proceed if we're still recording
-                        if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        // Check recording duration to avoid processing very short segments
+                        const recordingDuration = Date.now() - mediaRecorder.startTime;
+                        
+                        // Only proceed if we're still recording and have recorded for a meaningful duration
+                        if (mediaRecorder && mediaRecorder.state === 'recording' && recordingDuration > minimumAudioDuration) {
                             // Stop current recording
                             mediaRecorder.stop();
                             
