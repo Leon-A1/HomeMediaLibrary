@@ -21,6 +21,8 @@ from mutagen.id3 import ID3
 from faster_whisper import WhisperModel
 import tempfile
 import shutil
+from OpenSSL import crypto
+import ssl
 
 
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
@@ -1577,6 +1579,51 @@ def transcribe_audio():
             except Exception as e:
                 print(f"Error deleting output file: {e}")
 
+def generate_self_signed_cert():
+    """Generate self-signed SSL certificate if it doesn't exist"""
+    cert_dir = os.path.join(current_directory, 'cert')
+    os.makedirs(cert_dir, exist_ok=True)
+    
+    cert_path = os.path.join(cert_dir, 'cert.pem')
+    key_path = os.path.join(cert_dir, 'key.pem')
+    
+    if not (os.path.exists(cert_path) and os.path.exists(key_path)):
+        # Generate key
+        k = crypto.PKey()
+        k.generate_key(crypto.TYPE_RSA, 2048)
+        
+        # Generate certificate
+        cert = crypto.X509()
+        cert.get_subject().C = "US"
+        cert.get_subject().ST = "State"
+        cert.get_subject().L = "City"
+        cert.get_subject().O = "Organization"
+        cert.get_subject().OU = "Organizational Unit"
+        cert.get_subject().CN = "localhost"
+        
+        # Add Subject Alternative Names
+        san_extension = crypto.X509Extension(
+            b'subjectAltName',
+            False,
+            b'DNS:localhost,IP:127.0.0.1,IP:0.0.0.0'
+        )
+        cert.add_extensions([san_extension])
+        
+        cert.set_serial_number(1000)
+        cert.gmtime_adj_notBefore(0)
+        cert.gmtime_adj_notAfter(365*24*60*60)  # Valid for one year
+        cert.set_issuer(cert.get_subject())
+        cert.set_pubkey(k)
+        cert.sign(k, 'sha256')
+        
+        # Save certificate and private key
+        with open(cert_path, "wb") as f:
+            f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+        with open(key_path, "wb") as f:
+            f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
+    
+    return cert_path, key_path
+
 if __name__ == '__main__':
     print("Starting server...")
     os.makedirs(BOOK_DIR, exist_ok=True)
@@ -1585,5 +1632,38 @@ if __name__ == '__main__':
     os.makedirs(MEDIA_DIR, exist_ok=True)
     os.makedirs(SHUFFLED_DIR, exist_ok=True)
     os.makedirs(NOTEBOOK_DIR, exist_ok=True)
+    
+    # Generate SSL certificates
+    cert_path, key_path = generate_self_signed_cert()
+    
     # Set the host to 0.0.0.0 to make the server accessible from other devices on the network
-    app.run(host='0.0.0.0', port=3000)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(cert_path, key_path)
+    
+    # Start HTTPS server in a separate thread
+    def run_https():
+        app.run(host='0.0.0.0', port=3000, ssl_context=context)
+    
+    # Start HTTP server in a separate thread
+    def run_http():
+        app.run(host='0.0.0.0', port=3001)
+    
+    # Start both servers
+    https_thread = threading.Thread(target=run_https)
+    http_thread = threading.Thread(target=run_http)
+    
+    https_thread.start()
+    http_thread.start()
+    
+    print("Server started on:")
+    print("  - HTTPS: https://localhost:3000")
+    print("  - HTTP: http://localhost:3001")
+    print("  - HTTPS: https://0.0.0.0:3000")
+    print("  - HTTP: http://0.0.0.0:3001")
+    
+    # Keep the main thread alive
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
