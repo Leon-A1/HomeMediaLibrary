@@ -219,8 +219,8 @@
         let silenceDetectionInterval = null;
         let silenceStart = null;
         // let silenceThreshold = 0.01; // Threshold for determining silence
-        let silenceThreshold = 0.05; // Increased from 0.03 for better pause detection
-        let pauseDetectionDelay = 3000; // Increased from 1500ms to 3000ms
+        let silenceThreshold = 0.15; // Increased from 0.03 for better pause detection
+        let pauseDetectionDelay = 1500; // Increased from 1500ms to 3000ms
         let continuousMode = false; // Flag for continuous recording mode
         let pendingAudioBlobs = []; // Store audio segments for batch processing
         let processingTranscription = false; // Flag to prevent overlapping transcription requests
