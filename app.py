@@ -51,6 +51,7 @@ progress_queue = queue.Queue()
 
 # Add this near the top with other configuration variables
 BOOKMARKS_FILE = files_dir + "/bookmarks.json"
+TASKS_FILE = files_dir + "/tasks.json"
 
 def load_finished_books():
     if os.path.exists(FINISHED_BOOKS_FILE):
@@ -1623,6 +1624,77 @@ def generate_self_signed_cert():
             f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
     
     return cert_path, key_path
+
+def load_tasks():
+    if os.path.exists(TASKS_FILE):
+        with open(TASKS_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_tasks(tasks):
+    with open(TASKS_FILE, 'w') as f:
+        json.dump(tasks, f, indent=4)
+
+@app.route('/calendar')
+def calendar():
+    return render_template('calendar.html', **get_back_context())
+
+@app.route('/api/tasks')
+def get_tasks():
+    return jsonify(load_tasks())
+
+@app.route('/api/tasks', methods=['POST'])
+def add_task():
+    data = request.json
+    date = data.get('date')
+    task = data.get('task')
+    
+    if not date or not task:
+        return jsonify({'success': False, 'message': 'Invalid data'})
+    
+    tasks = load_tasks()
+    if date not in tasks:
+        tasks[date] = []
+    tasks[date].append(task)
+    save_tasks(tasks)
+    
+    return jsonify({'success': True})
+
+@app.route('/api/tasks/toggle', methods=['POST'])
+def toggle_task():
+    data = request.json
+    date = data.get('date')
+    task_id = data.get('taskId')
+    
+    if not date or task_id is None:
+        return jsonify({'success': False, 'message': 'Invalid data'})
+    
+    tasks = load_tasks()
+    if date in tasks and 0 <= task_id < len(tasks[date]):
+        tasks[date][task_id]['completed'] = not tasks[date][task_id]['completed']
+        save_tasks(tasks)
+        return jsonify({'success': True})
+    
+    return jsonify({'success': False, 'message': 'Task not found'})
+
+@app.route('/api/tasks/delete', methods=['POST'])
+def delete_task():
+    data = request.json
+    date = data.get('date')
+    task_id = data.get('taskId')
+    
+    if not date or task_id is None:
+        return jsonify({'success': False, 'message': 'Invalid data'})
+    
+    tasks = load_tasks()
+    if date in tasks and 0 <= task_id < len(tasks[date]):
+        tasks[date].pop(task_id)
+        if not tasks[date]:  # If no tasks left for this date, remove the date entry
+            del tasks[date]
+        save_tasks(tasks)
+        return jsonify({'success': True})
+    
+    return jsonify({'success': False, 'message': 'Task not found'})
 
 if __name__ == '__main__':
     print("Starting server...")

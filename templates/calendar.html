@@ -1,0 +1,474 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12 col-lg-8 mb-4 mb-lg-0">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" id="currentMonth"></h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" id="prevMonth">&lt;</button>
+                        <button class="btn btn-sm btn-outline-primary" id="nextMonth">&gt;</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="calendar-grid">
+                        <div class="calendar-header">
+                            <div>S</div>
+                            <div>M</div>
+                            <div>T</div>
+                            <div>W</div>
+                            <div>T</div>
+                            <div>F</div>
+                            <div>S</div>
+                        </div>
+                        <div class="calendar-body" id="calendarBody"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Tasks for <span id="selectedDate"></span></h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-0">
+                        <input type="text" style="width: 100%; background-color: #121212; color: white;margin: 10px 0" id="newTask" placeholder="Add new task...">
+                    </div>
+                    <div id="taskList" class="list-group">
+                        <!-- Tasks will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.calendar-grid {
+    width: 100%;
+    border: 1px solid #121212;
+    border-radius: 0.25rem;
+    max-width: 1400px;
+
+}
+
+.calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background-color: #323232;
+    border-bottom: 1px solid #121212;
+    max-width: 1400px;
+
+}
+
+.calendar-header div {
+    padding: 0.5rem;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    max-width: 950px;
+}
+
+.calendar-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background-color: #121212;
+    max-width: 1400px;
+
+}
+
+.calendar-day {
+    background-color: black;
+    min-height: 80px;
+    padding: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    max-width: 200px;
+
+}
+
+.calendar-day:hover {
+    background-color: #252525;
+}
+
+.calendar-day.selected {
+    background-color: #242424;
+}
+
+.calendar-day.today {
+    background-color: #272727;
+}
+
+.calendar-day.other-month {
+    color: #0e4e8f;
+}
+
+.day-number {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+    position: sticky;
+    top: 0;
+    background-color: inherit;
+    z-index: 1;
+}
+
+.day-tasks {
+    flex-grow: 1;
+    overflow-y: auto;
+    font-size: 0.75rem;
+    /* max-height: calc(100% - 1.5rem) or 200px; */
+    max-height: 75px;
+}
+
+.day-task {
+    background-color: #1a1a1a;
+    padding: 0.25rem;
+    margin-bottom: 0.25rem;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.day-task:hover {
+    background-color: #252525;
+}
+
+.day-task.completed {
+    background-color: #1a3a1a;
+    text-decoration: line-through;
+    color: #888;
+}
+
+.task-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background-color: black;
+    border-radius: 0.25rem;
+}
+
+.task-item.completed {
+    background-color: #31aa41;
+    text-decoration: line-through;
+    color: white;
+}
+
+.task-checkbox {
+    margin-right: 0.5rem;
+}
+
+.task-delete {
+    color: #dc3545;
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.task-delete:hover {
+    color: #c82333;
+}
+
+/* Scrollbar styling */
+.day-tasks::-webkit-scrollbar {
+    width: 4px;
+}
+
+.day-tasks::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.day-tasks::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 2px;
+}
+
+.day-tasks::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .calendar-day {
+        min-height: 60px;
+        padding: 0.15rem;
+    }
+
+    .day-number {
+        font-size: 0.9rem;
+    }
+
+    .day-tasks {
+        font-size: 0.7rem;
+        max-height: 50px;
+
+    }
+
+    .day-task {
+        padding: 0.15rem;
+        margin-bottom: 0.15rem;
+    }
+
+    .calendar-header div {
+        padding: 0.25rem;
+        font-size: 0.8rem;
+    }
+
+    .card-body {
+        padding: 0rem;
+    }
+
+    .task-item {
+        padding: 0.35rem;
+        margin-bottom: 0.35rem;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .calendar-day {
+        min-height: 50px;
+        padding: 0.1rem;
+    }
+
+    .day-number {
+        font-size: 0.8rem;
+    }
+
+    .day-tasks {
+        font-size: 0.65rem;
+        max-width: 50px;
+    }
+
+    .day-task {
+        padding: 0.1rem;
+        max-width: 50px;
+
+        margin-bottom: 0.1rem;
+    }
+
+    .calendar-header div {
+        padding: 0.2rem;
+        font-size: 0.75rem;
+    }
+
+    .card-header h5 {
+        font-size: 1rem;
+    }
+
+    .task-item {
+        padding: 0.25rem;
+        margin-bottom: 0.25rem;
+        font-size: 0.85rem;
+    }
+}
+</style>
+
+<script>
+let currentDate = new Date();
+let selectedDate = new Date();
+let tasks = {};
+
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
+}
+
+function loadTasks() {
+    fetch('/api/tasks')
+        .then(response => response.json())
+        .then(data => {
+            tasks = data;
+            updateTaskList();
+            renderCalendar();
+        })
+        .catch(error => console.error('Error loading tasks:', error));
+}
+
+function saveTask(date, task) {
+    fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date, task })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (!tasks[date]) {
+                tasks[date] = [];
+            }
+            tasks[date].push(task);
+            updateTaskList();
+            renderCalendar();
+            document.getElementById('newTask').value = '';
+        }
+    })
+    .catch(error => console.error('Error saving task:', error));
+}
+
+function toggleTask(date, taskId) {
+    fetch('/api/tasks/toggle', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date, taskId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            tasks[date][taskId].completed = !tasks[date][taskId].completed;
+            updateTaskList();
+            renderCalendar();
+        }
+    })
+    .catch(error => console.error('Error toggling task:', error));
+}
+
+function deleteTask(date, taskId) {
+    fetch('/api/tasks/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date, taskId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            tasks[date].splice(taskId, 1);
+            updateTaskList();
+            renderCalendar();
+        }
+    })
+    .catch(error => console.error('Error deleting task:', error));
+}
+
+function updateTaskList() {
+    const taskList = document.getElementById('taskList');
+    const dateStr = formatDate(selectedDate);
+    taskList.innerHTML = '';
+    
+    if (tasks[dateStr]) {
+        tasks[dateStr].forEach((task, index) => {
+            const taskElement = document.createElement('div');
+            taskElement.className = `task-item ${task.completed ? 'completed' : ''}`;
+            taskElement.innerHTML = `
+                <div>
+                    <input type="checkbox" class="task-checkbox" 
+                           ${task.completed ? 'checked' : ''} 
+                           onchange="toggleTask('${dateStr}', ${index})">
+                    <span>${task.text}</span>
+                </div>
+                <span class="task-delete" onclick="deleteTask('${dateStr}', ${index})">×</span>
+            `;
+            taskList.appendChild(taskElement);
+        });
+    }
+}
+
+function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startingDay = firstDay.getDay();
+    
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+                       "July", "August", "September", "October", "November", "December"];
+    
+    document.getElementById('currentMonth').textContent = `${monthNames[month]} ${year}`;
+    
+    const calendarBody = document.getElementById('calendarBody');
+    calendarBody.innerHTML = '';
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDay; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day other-month';
+        calendarBody.appendChild(emptyDay);
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dayElement = document.createElement('div');
+        dayElement.className = 'calendar-day';
+        const currentDayDate = new Date(year, month, day);
+        const dateStr = formatDate(currentDayDate);
+        
+        if (formatDate(currentDayDate) === formatDate(new Date())) {
+            dayElement.classList.add('today');
+        }
+        
+        if (formatDate(currentDayDate) === formatDate(selectedDate)) {
+            dayElement.classList.add('selected');
+        }
+        
+        // Add day number
+        const dayNumber = document.createElement('div');
+        dayNumber.className = 'day-number';
+        dayNumber.textContent = day;
+        dayElement.appendChild(dayNumber);
+        
+        // Add tasks container
+        const tasksContainer = document.createElement('div');
+        tasksContainer.className = 'day-tasks';
+        
+        // Add tasks for this day
+        if (tasks[dateStr]) {
+            tasks[dateStr].forEach(task => {
+                const taskElement = document.createElement('div');
+                taskElement.className = `day-task ${task.completed ? 'completed' : ''}`;
+                taskElement.textContent = task.text;
+                tasksContainer.appendChild(taskElement);
+            });
+        }
+        
+        dayElement.appendChild(tasksContainer);
+        
+        dayElement.onclick = () => {
+            selectedDate = currentDayDate;
+            document.getElementById('selectedDate').textContent = formatDate(selectedDate);
+            updateTaskList();
+            renderCalendar();
+        };
+        
+        calendarBody.appendChild(dayElement);
+    }
+}
+
+document.getElementById('prevMonth').onclick = () => {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderCalendar();
+};
+
+document.getElementById('nextMonth').onclick = () => {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar();
+};
+
+document.getElementById('newTask').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const taskText = e.target.value.trim();
+        if (taskText) {
+            saveTask(formatDate(selectedDate), { text: taskText, completed: false });
+        }
+    }
+});
+
+// Initialize
+document.getElementById('selectedDate').textContent = formatDate(selectedDate);
+loadTasks();
+</script>
+{% endblock %} 
