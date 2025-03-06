@@ -82,6 +82,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
+        z-index:100;
     }
     .create-btn:hover {
         background: #357abd;
@@ -96,6 +97,7 @@
     
     .search-input {
         width: 100%;
+        max-width: 78vw;
         padding: 12px 20px;
         font-size: 1em;
         background: #2c2c2c;
@@ -133,9 +135,9 @@
         <a href="/notebook/{{ page.name }}" class="page-card">
             <h3>{{ page.name }}</h3>
             <div class="date-info">
-                Created: {{ page.createdAt.split('T')[0] }}
+                Created: <span class="datetime" data-timestamp="{{ page.createdAt }}">{{ page.createdAt.split('T')[0] }}</span>
                 {% if page.updatedAt != page.createdAt %}
-                <br>Updated: {{ page.updatedAt.split('T')[0] }}
+                <br>Updated: <span class="datetime" data-timestamp="{{ page.updatedAt }}">{{ page.updatedAt.split('T')[0] }}</span>
                 {% endif %}
             </div>
             <div class="preview">{{ page.content|striptags|truncate(100) }}</div>
@@ -156,6 +158,26 @@
                 });
         }
 
+        // Format date and time in local timezone
+        function formatDateTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        }
+
+        // Convert all timestamp elements on page load
+        function convertTimestamps() {
+            document.querySelectorAll('.datetime').forEach(el => {
+                const timestamp = el.getAttribute('data-timestamp');
+                if (timestamp) {
+                    el.textContent = formatDateTime(timestamp);
+                }
+            });
+        }
+
+        // Run conversion on page load
+        document.addEventListener('DOMContentLoaded', convertTimestamps);
+
         // Add search functionality
         const searchInput = document.getElementById('searchInput');
         const pageGrid = document.getElementById('pageGrid');
@@ -173,9 +195,9 @@
                                 <a href="/notebook/${page.name}" class="page-card">
                                     <h3>${page.name}</h3>
                                     <div class="date-info">
-                                        Created: ${page.createdAt.split('T')[0]}
+                                        Created: <span class="datetime">${formatDateTime(page.createdAt)}</span>
                                         ${page.updatedAt !== page.createdAt ? 
-                                          `<br>Updated: ${page.updatedAt.split('T')[0]}` : 
+                                          `<br>Updated: <span class="datetime">${formatDateTime(page.updatedAt)}</span>` : 
                                           ''}
                                     </div>
                                     <div class="preview">${page.content ? 
