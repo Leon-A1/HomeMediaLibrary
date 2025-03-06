@@ -3,9 +3,9 @@ echo Starting Flask Server...
 start "Flask Server" python app.py
 
 @REM rem Optionally wait a few seconds to ensure the Flask server starts up
-@REM timeout /t 5 /nobreak >nul
+timeout /t 5 /nobreak >nul
 
 @REM echo Starting ngrok tunnel...
-@REM start "ngrok" ngrok http --url=merely-big-falcon.ngrok-free.app 5000
+start "ngrok" ngrok http --url=merely-big-falcon.ngrok-free.app 3001
 
 pause
