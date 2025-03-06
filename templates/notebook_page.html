@@ -198,6 +198,10 @@
                 🔄 Auto
                 <span class="tooltiptext">Continuous recording with pause detection</span>
             </button>
+            <button class="format-btn tooltip" onclick="copyContent()" id="copyBtn">
+                📋 Copy
+                <span class="tooltiptext">Copy content to clipboard (Ctrl+C)</span>
+            </button>
         </div>
         <div id="editor" contenteditable="true">{{ page.content|safe }}</div>
         <div class="button-group" style="margin-top: 40px;">
@@ -227,6 +231,78 @@
         let visualizationCanvas = null;
         let canvasContext = null;
         let noiseFloor = 0.05; // Threshold to determine if audio contains actual speech
+
+        function copyContent() {
+            // Get editor content
+            const editor = document.getElementById('editor');
+            const content = editor.innerText;
+            
+            // Create a feedback element
+            const feedback = document.createElement('div');
+            feedback.style.position = 'fixed';
+            feedback.style.top = '20px';
+            feedback.style.left = '50%';
+            feedback.style.transform = 'translateX(-50%)';
+            feedback.style.padding = '10px 20px';
+            feedback.style.background = '#4a9eff';
+            feedback.style.color = 'white';
+            feedback.style.borderRadius = '4px';
+            feedback.style.zIndex = '1000';
+            feedback.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+            
+            try {
+                // Use the modern clipboard API
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(content)
+                        .then(() => {
+                            feedback.textContent = 'Content copied to clipboard!';
+                            document.body.appendChild(feedback);
+                            setTimeout(() => feedback.remove(), 2000);
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy content: ', err);
+                            feedback.textContent = 'Could not copy content. Please try again.';
+                            feedback.style.background = '#ff4a4a';
+                            document.body.appendChild(feedback);
+                            setTimeout(() => feedback.remove(), 2000);
+                        });
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = content;
+                    textArea.style.position = 'fixed';
+                    textArea.style.opacity = 0;
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    if (successful) {
+                        feedback.textContent = 'Content copied to clipboard!';
+                        document.body.appendChild(feedback);
+                        setTimeout(() => feedback.remove(), 2000);
+                    } else {
+                        throw new Error('Copy command failed');
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to copy content: ', err);
+                feedback.textContent = 'Could not copy content. Please try again.';
+                feedback.style.background = '#ff4a4a';
+                document.body.appendChild(feedback);
+                setTimeout(() => feedback.remove(), 2000);
+            }
+        }
+
+        // Add keyboard shortcut for Ctrl+C in editor (when not selecting text)
+        document.getElementById('editor').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'c' && window.getSelection().toString() === '') {
+                e.preventDefault();
+                copyContent();
+            }
+        });
 
         function toggleRecording() {
             const micBtn = document.getElementById('micBtn');
