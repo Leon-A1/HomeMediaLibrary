@@ -1807,6 +1807,14 @@ def delete_task():
     
     return jsonify({'success': False, 'message': 'Task not found'})
 
+@app.route('/locked-media/<path:filename>')
+def serve_locked_media(filename):
+    if not check_auth('private'):
+        return redirect(url_for('section_login', section='private'))
+    
+    # Use LOCKED_DIR directly instead of app.config['UPLOAD_FOLDER']
+    return send_from_directory(LOCKED_DIR, filename)
+
 if __name__ == '__main__':
     print("Starting server...")
     os.makedirs(BOOK_DIR, exist_ok=True)
