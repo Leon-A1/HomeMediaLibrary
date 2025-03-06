@@ -219,7 +219,7 @@
         let silenceDetectionInterval = null;
         let silenceStart = null;
         let silenceThreshold = 0.15; // Increased from 0.03 for better pause detection
-        let pauseDetectionDelay = 3000; // Increased to 3000ms for better pause detection
+        let pauseDetectionDelay = 1000; // Increased to 3000ms for better pause detection
         let minimumAudioDuration = 1000; // Minimum audio duration to process (1 second)
         let continuousMode = false; // Flag for continuous recording mode
         let pendingAudioBlobs = []; // Store audio segments for batch processing
@@ -544,7 +544,8 @@
         async function sendAudioForTranscription(audioBlob) {
             try {
                 // Check if the audio blob is empty
-                if (audioBlob.size === 0) {
+                console.log('Audio blob size:', audioBlob.size);
+                if (audioBlob.size < 50000) {
                     console.error('No audio data recorded');
                     return;
                 }
