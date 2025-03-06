@@ -42,7 +42,8 @@ ALLOWED_EXTENSIONS = {'epub'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 FINISHED_BOOKS_FILE = files_dir + "/finished_books.json"
-PASSWORD = "123"  # Locked will be hidden until a password is set
+MAIN_PASSWORD = "main123"  # Password for most sections
+PRIVATE_PASSWORD = "123"  # Use the existing PASSWORD for locked and notebook sections
 
 
 # Add these global variables at the top of the file
@@ -218,11 +219,19 @@ def has_videos():
     )
 
 
-def check_auth():
-    return session.get('authenticated', False)
+def check_auth(section):
+    """Check if user is authenticated for a specific section"""
+    if section in ["locked", "notebook"]:
+        return session.get('authenticated_private', False)
+    else:
+        return session.get('authenticated_main', False)
+
+def check_auth_any():
+    """Check if user is authenticated for any section"""
+    return session.get('authenticated_main', False) or session.get('authenticated_private', False)
     
 def has_protected_content():
-    return bool(PASSWORD.strip()) 
+    return bool(PRIVATE_PASSWORD.strip()) 
 
 @app.route('/')
 def index():
@@ -241,10 +250,13 @@ def index():
                           has_books=has_books(),
                           has_photos=has_photos(),
                           has_videos=has_videos(),
-                          has_protected=has_protected_content())
+                          has_protected=True)  # Always show as protected now
 
 @app.route('/music')
 def music():
+    if not check_auth('music'):
+        return redirect(url_for('section_login', section='music'))
+    
     # Get folders and their file counts
     folders = ['Downloads']  # Downloads as first folder option
     folder_counts = {}
@@ -334,6 +346,8 @@ def get_folder_contents(folder_name):
 
 @app.route('/music/<path:filename>')
 def stream_music(filename):
+    if not check_auth('music'):
+        abort(403)
     # Split the path into folder and filename
     parts = os.path.split(filename)
     if len(parts) > 1:
@@ -343,10 +357,14 @@ def stream_music(filename):
 
 @app.route('/photos')
 def photos():
+    if not check_auth('photos'):
+        return redirect(url_for('section_login', section='photos'))
     return render_template('photos.html', **get_back_context())
 
 @app.route('/api/photos')
 def get_photos():
+    if not check_auth('photos'):
+        abort(403)
     page = int(request.args.get('page', 1))
     path = request.args.get('path', '')
     per_page = 5
@@ -379,6 +397,8 @@ def get_photos():
 
 @app.route('/videos')
 def videos():
+    if not check_auth('videos'):
+        return redirect(url_for('section_login', section='videos'))
     return render_template('videos.html')
 
 def get_video_date(file_path):
@@ -407,6 +427,8 @@ def get_video_date(file_path):
 
 @app.route('/api/videos')
 def get_videos():
+    if not check_auth('videos'):
+        abort(403)
     page = int(request.args.get('page', 1))
     path = request.args.get('path', '')
     per_page = 5
@@ -435,19 +457,21 @@ def get_videos():
 
 @app.route('/media/<path:filename>')
 def serve_media(filename):
+    if not check_auth('photos'):  # Using photos auth for media
+        abort(403)
     parts = filename.split('/')
     directory = os.path.join(MEDIA_DIR, *parts[:-1])
     return send_from_directory(directory, parts[-1])
 
 @app.route('/locked')
 def locked():
-    if not check_auth():
-        return render_template('login.html')
+    if not check_auth('locked'):
+        return redirect(url_for('section_login', section='locked'))
     return render_template('locked.html')
 
 @app.route('/api/locked')
 def get_locked():
-    if not check_auth():
+    if not check_auth('locked'):
         abort(403)
     page = int(request.args.get('page', 1))
     per_page = 5
@@ -503,23 +527,40 @@ def get_locked():
         'total': total
     })
 
-@app.route('/login', methods=['POST'])
-def login():
-    if request.form.get('password') == PASSWORD:
-        session['authenticated'] = True
-        return jsonify({'success': True})
-    return jsonify({'success': False, 'message': 'Invalid password'})
+@app.route('/login/<section>', methods=['GET', 'POST'])
+def section_login(section):
+    # Determine which password to use based on section
+    if section in ["locked", "notebook"]:
+        auth_type = "private"
+        password = PRIVATE_PASSWORD
+    else:
+        auth_type = "main"
+        password = MAIN_PASSWORD
+        
+    if request.method == 'POST':
+        if request.form.get('password') == password:
+            session[f'authenticated_{auth_type}'] = True
+            # Determine where to redirect based on section
+            redirect_map = {
+                "books": "/books",
+                "music": "/music",
+                "photos": "/photos",
+                "videos": "/videos",
+                "notebook": "/notebook",
+                "calendar": "/calendar",
+                "youtube": "/youtube-downloader",
+                "locked": "/locked"
+            }
+            return jsonify({'success': True, 'redirect': redirect_map.get(section, '/')})
+        return jsonify({'success': False, 'message': 'Invalid password'})
+    
+    return render_template('login.html', section=section)
 
-@app.route('/logout')
-def logout():
-    session.pop('authenticated', None)
-    return redirect(url_for('locked'))
-
-@app.route('/locked-media/<path:filename>')
-def serve_locked_media(filename):
-    if not check_auth():
-        abort(403)
-    return send_from_directory(LOCKED_DIR, filename)
+@app.route('/logout/<auth_type>')
+def section_logout(auth_type):
+    if auth_type in ["main", "private"]:
+        session.pop(f'authenticated_{auth_type}', None)
+    return redirect(url_for('index'))
 
 @app.route('/add_shuffled_song', methods=['POST'])
 def add_shuffled_song():
@@ -591,6 +632,8 @@ def load_notebook_pages():
 
 @app.route('/notebook')
 def notebook():
+    if not check_auth('notebook'):
+        return redirect(url_for('section_login', section='notebook'))
     pages = load_notebook_pages()
     return render_template('notebook.html', 
                          pages=pages, 
@@ -793,6 +836,8 @@ def download_from_youtube(url, format_type, download_id, folder):
 
 @app.route('/youtube-downloader')
 def youtube_downloader():
+    if not check_auth('youtube'):
+        return redirect(url_for('section_login', section='youtube'))
     return render_template('youtube_downloader.html', **get_back_context())
 
 @app.route('/download', methods=['POST'])
@@ -862,6 +907,8 @@ def get_music_folders():
 
 @app.route('/read/<path:filename>')
 def read_book(filename):
+    if not check_auth('books'):
+        return redirect(url_for('section_login', section='books'))
     if not allowed_file(filename):
         abort(404)
     return render_template('reader.html', 
@@ -871,6 +918,8 @@ def read_book(filename):
 
 @app.route('/book-content/<path:filename>')
 def get_book_content(filename):
+    if not check_auth('books'):
+        abort(403)
     if not allowed_file(filename):
         abort(404)
     
@@ -1143,6 +1192,8 @@ def add_bookmark():
 
 @app.route('/api/bookmarks')
 def api_bookmarks():
+    if not check_auth('books'):
+        abort(403)
     book = request.args.get('book')
     page = request.args.get('page')
     bookmarks = load_bookmarks()
@@ -1210,6 +1261,8 @@ def has_books():
     return any(f.endswith('.epub') for f in os.listdir(BOOK_DIR))
 @app.route('/books')
 def books():
+    if not check_auth('books'):
+        return redirect(url_for('section_login', section='books'))
     books = []
     finished_books = load_finished_books()
     
@@ -1256,6 +1309,8 @@ def toggle_finished(book_title):
 
 @app.route('/books/<path:filename>')
 def serve_book(filename):
+    if not check_auth('books'):
+        abort(403)
     if not allowed_file(filename):
         abort(404)
     return send_from_directory(BOOK_DIR, filename)
@@ -1687,14 +1742,20 @@ def save_tasks(tasks):
 
 @app.route('/calendar')
 def calendar():
+    if not check_auth('calendar'):
+        return redirect(url_for('section_login', section='calendar'))
     return render_template('calendar.html', **get_back_context())
 
 @app.route('/api/tasks')
 def get_tasks():
+    if not check_auth('calendar'):
+        abort(403)
     return jsonify(load_tasks())
 
 @app.route('/api/tasks', methods=['POST'])
 def add_task():
+    if not check_auth('calendar'):
+        abort(403)
     data = request.json
     date = data.get('date')
     task = data.get('task')
