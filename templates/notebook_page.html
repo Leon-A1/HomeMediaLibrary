@@ -47,7 +47,7 @@
     }
     .content {
         background: #2d2d2d;
-        padding: 25px;
+        padding: 15px;
         border-radius: 12px;
         border: 1px solid #404040;
         min-height: 400px;
@@ -172,6 +172,13 @@
         {% endif %}
     </div>
     
+    <div style="display: flex; padding:0; overflow: hidden; justify-content: flex-end; margin:0; margin-bottom: 10px; transform: translateX(35px); max-width: calc(100% - 40px);">
+        <button class="format-btn tooltip" onclick="copyContent()" id="copyBtn">
+            📋 Copy
+            <span class="tooltiptext">Copy content to clipboard (Ctrl+C)</span>
+        </button>
+    </div>
+    
     <div id="viewMode" class="content">{{ page.content|safe }}</div>
     <div id="editMode" class="content" style="display: none;">
         <div class="toolbar">
@@ -197,10 +204,6 @@
             <button class="format-btn tooltip" onclick="toggleContinuousMode()" id="continuousBtn">
                 🔄 Auto
                 <span class="tooltiptext">Continuous recording with pause detection</span>
-            </button>
-            <button class="format-btn tooltip" onclick="copyContent()" id="copyBtn">
-                📋 Copy
-                <span class="tooltiptext">Copy content to clipboard (Ctrl+C)</span>
             </button>
         </div>
         <div id="editor" contenteditable="true">{{ page.content|safe }}</div>
@@ -253,9 +256,10 @@
         let noiseFloor = 0.05; // Threshold to determine if audio contains actual speech
 
         function copyContent() {
-            // Get editor content
+            // Get content from the appropriate source
+            const viewMode = document.getElementById('viewMode');
             const editor = document.getElementById('editor');
-            const content = editor.innerText;
+            const content = viewMode.style.display !== 'none' ? viewMode.innerText : editor.innerText;
             
             // Create a feedback element
             const feedback = document.createElement('div');
