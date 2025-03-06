@@ -61,7 +61,7 @@
         border: none;
         font-family: inherit;
         font-size: inherit;
-        line-height: 1.1;
+        line-height: 1.2;
         resize: none;
         padding: 5px;
     }
@@ -97,7 +97,7 @@
         font-size: 0.9em;
     }
     #viewMode {
-        line-height: 1.6;
+        line-height: 1.2;
         white-space: pre-wrap;
     }
     #viewMode strong {
@@ -166,9 +166,9 @@
     </div>
 
     <div class="date-info">
-        Created: {{ page.createdAt.split('T')[0] }}
+        Created: <span class="datetime" data-timestamp="{{ page.createdAt }}">{{ page.createdAt.split('T')[0] }}</span>
         {% if page.updatedAt != page.createdAt %}
-        | Updated: {{ page.updatedAt.split('T')[0] }}
+        | Updated: <span class="datetime" data-timestamp="{{ page.updatedAt }}">{{ page.updatedAt.split('T')[0] }}</span>
         {% endif %}
     </div>
     
@@ -214,6 +214,26 @@
 {% block scripts %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.0/purify.min.js"></script>
     <script>
+        // Format date and time in local timezone
+        function formatDateTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        }
+
+        // Convert all timestamp elements on page load
+        function convertTimestamps() {
+            document.querySelectorAll('.datetime').forEach(el => {
+                const timestamp = el.getAttribute('data-timestamp');
+                if (timestamp) {
+                    el.textContent = formatDateTime(timestamp);
+                }
+            });
+        }
+
+        // Run conversion on page load
+        document.addEventListener('DOMContentLoaded', convertTimestamps);
+        
         let mediaRecorder = null;
         let audioChunks = [];
         let isRecording = false;
