@@ -144,6 +144,48 @@
         visibility: visible;
         opacity: 1;
     }
+    .delete-btn {
+        margin-left: auto;
+        background-color: rgba(255, 74, 74, 0.1);
+    }
+    .delete-btn:hover {
+        background-color: rgba(255, 74, 74, 0.3);
+    }
+    .confirmation-dialog {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #2d2d2d;
+        border: 1px solid #404040;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        max-width: 400px;
+        width: 90%;
+    }
+    .confirmation-dialog h3 {
+        margin-top: 0;
+        color: #ff4a4a;
+    }
+    .confirmation-dialog p {
+        margin-bottom: 20px;
+    }
+    .dialog-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+    }
 {% endblock %}
 
 {% block content %}
@@ -204,6 +246,10 @@
             <button class="format-btn tooltip" onclick="toggleContinuousMode()" id="continuousBtn">
                 🔄 Auto
                 <span class="tooltiptext">Continuous recording with pause detection</span>
+            </button>
+            <button class="format-btn tooltip delete-btn" onclick="confirmDelete()">
+                🗑️ Delete
+                <span class="tooltiptext">Delete this page</span>
             </button>
         </div>
         <div id="editor" contenteditable="true">{{ page.content|safe }}</div>
@@ -883,6 +929,57 @@
                 document.execCommand('createLink', false, url);
                 updateButtonStates();
             }
+        }
+
+        function confirmDelete() {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            document.body.appendChild(overlay);
+            
+            // Create confirmation dialog
+            const dialog = document.createElement('div');
+            dialog.className = 'confirmation-dialog';
+            dialog.innerHTML = `
+                <h3>Delete Page</h3>
+                <p>Are you sure you want to delete "${document.getElementById('pageTitle').textContent}"? This action cannot be undone.</p>
+                <div class="dialog-buttons">
+                    <button class="button" onclick="cancelDelete()">Cancel</button>
+                    <button class="button cancel" onclick="deletePage()">Delete</button>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+        }
+        
+        function cancelDelete() {
+            // Remove overlay and dialog
+            document.querySelector('.overlay').remove();
+            document.querySelector('.confirmation-dialog').remove();
+        }
+        
+        function deletePage() {
+            fetch(window.location.pathname + '/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Delete response:', data); // Add logging
+                if (data.success) {
+                    // Force a hard redirect to clear any cache
+                    window.location.href = '/notebook';
+                } else {
+                    alert(data.message || 'Failed to delete page');
+                    cancelDelete();
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting page:', error);
+                alert('An error occurred while deleting the page. Please try again.');
+                cancelDelete();
+            });
         }
     </script>
 {% endblock %}

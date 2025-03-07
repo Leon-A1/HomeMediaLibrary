@@ -23,7 +23,7 @@ import tempfile
 import shutil
 from OpenSSL import crypto
 import ssl
-
+from urllib.parse import unquote
 
 current_directory = os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
@@ -750,6 +750,32 @@ def rename_page(name):
     os.remove(old_filepath)
     
     return jsonify({"success": True, "page": page})
+
+@app.route('/notebook/<name>/delete', methods=['POST'])
+def delete_page(name):
+    try:
+        # Decode the URL-encoded name
+        decoded_name = unquote(name)
+        print(f"Attempting to delete page: '{decoded_name}'")
+        
+        # Find the file to delete
+        filename = f"{decoded_name}.json"
+        filepath = os.path.join(NOTEBOOK_DIR, filename)
+        
+        if not os.path.exists(filepath):
+            print(f"Page file not found: '{filepath}'")
+            return jsonify({'success': False, 'message': 'Page file not found'})
+        
+        # Delete the file
+        os.remove(filepath)
+        print(f"Deleted page file: '{filepath}'")
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        import traceback
+        print(f"Error deleting page: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'message': str(e)})
 
 def download_from_youtube(url, format_type, download_id, folder):
     try:
