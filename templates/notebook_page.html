@@ -245,15 +245,16 @@
         let audioStream = null;
         let silenceDetectionInterval = null;
         let silenceStart = null;
-        let silenceThreshold = 0.15; // Increased from 0.03 for better pause detection
-        let pauseDetectionDelay = 1000; // Increased to 3000ms for better pause detection
-        let minimumAudioDuration = 1000; // Minimum audio duration to process (1 second)
-        let continuousMode = false; // Flag for continuous recording mode
-        let pendingAudioBlobs = []; // Store audio segments for batch processing
-        let processingTranscription = false; // Flag to prevent overlapping transcription requests
+        let silenceThreshold = 0.15;
+        let pauseDetectionDelay = 1000;
+        let minimumAudioDuration = 1000;
+        let continuousMode = false;
+        let pendingAudioBlobs = [];
+        let processingTranscription = false;
         let visualizationCanvas = null;
         let canvasContext = null;
-        let noiseFloor = 0.05; // Threshold to determine if audio contains actual speech
+        let noiseFloor = 0.05;
+        let recordingActive = false; // Flag to track if we should be recording
 
         function copyContent() {
             // Get content from the appropriate source
@@ -374,56 +375,15 @@
                     setupAudioVisualization();
                 }
 
-                mediaRecorder = new MediaRecorder(audioStream, {
-                    mimeType: 'audio/webm;codecs=opus',
-                    audioBitsPerSecond: 128000 // Higher bitrate for better quality
-                });
-                mediaRecorder.startTime = Date.now(); // Track when recording started
-                audioChunks = [];
-
-                mediaRecorder.ondataavailable = (event) => {
-                    console.log('Data available:', event.data.size, 'bytes');
-                    audioChunks.push(event.data);
-                };
-
-                mediaRecorder.onstop = async () => {
-                    console.log('Recording stopped, processing audio...');
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    
-                    // Only process if there's actual data
-                    if (audioBlob.size > 0) {
-                        if (continuousMode) {
-                            // Add to pending blobs for batch processing
-                            pendingAudioBlobs.push(audioBlob);
-                            
-                            // Process accumulated audio if not currently processing and if either:
-                            // 1. User manually stopped recording, or
-                            // 2. We've accumulated enough segments (3 or more)
-                            if (!processingTranscription && 
-                                (!isRecording || pendingAudioBlobs.length >= 3)) {
-                                await processPendingAudio();
-                            }
-                        } else {
-                            // For manual recording, process immediately
-                            await sendAudioForTranscription(audioBlob);
-                        }
-                    }
-                    
-                    // If in continuous mode and not manually stopped by user, restart recording
-                    if (continuousMode && isRecording) {
-                        startRecording(false);
-                    }
-                };
-
-                mediaRecorder.onerror = (event) => {
-                    console.error('MediaRecorder error:', event.error);
-                    alert('Error recording audio: ' + event.error.message);
-                };
-
-                mediaRecorder.start();
+                // Set up continuous recording
+                recordingActive = true;
                 isRecording = true;
                 const micBtn = document.getElementById('micBtn');
                 micBtn.style.background = '#ff4a4a';
+                
+                // Start the actual recording
+                startNewRecordingSegment();
+                
                 console.log('Recording started');
             } catch (error) {
                 console.error('Error accessing microphone:', error);
@@ -435,6 +395,60 @@
                     alert('Error accessing microphone: ' + error.message);
                 }
             }
+        }
+        
+        function startNewRecordingSegment() {
+            if (!recordingActive || !audioStream) return;
+            
+            console.log('Starting new recording segment');
+            
+            mediaRecorder = new MediaRecorder(audioStream, {
+                mimeType: 'audio/webm;codecs=opus',
+                audioBitsPerSecond: 128000
+            });
+            
+            mediaRecorder.startTime = Date.now();
+            audioChunks = [];
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+            
+            mediaRecorder.onstop = async () => {
+                if (!recordingActive) return; // Don't process if we're shutting down
+                
+                console.log('Recording segment stopped, length:', Date.now() - mediaRecorder.startTime);
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                
+                // Only process if there's actual data and it's not too small
+                if (audioBlob.size > 10000) {
+                    if (continuousMode) {
+                        pendingAudioBlobs.push(audioBlob);
+                        
+                        // Process if we have enough data or if user stopped recording
+                        if (!processingTranscription && 
+                            (!isRecording || pendingAudioBlobs.length >= 3)) {
+                            processPendingAudio();
+                        }
+                    } else {
+                        await sendAudioForTranscription(audioBlob);
+                    }
+                }
+                
+                // Always start a new recording segment if we're still active
+                if (recordingActive && continuousMode) {
+                    startNewRecordingSegment();
+                }
+            };
+            
+            mediaRecorder.onerror = (event) => {
+                console.error('MediaRecorder error:', event.error);
+            };
+            
+            // Start recording
+            mediaRecorder.start();
         }
 
         // Function to process accumulated audio blobs
@@ -452,9 +466,10 @@
                 const combinedBlob = new Blob(pendingAudioBlobs, { type: 'audio/webm' });
                 pendingAudioBlobs = []; // Clear the pending queue
                 
-                // Skip processing if the audio is too short (likely just background noise)
-                if (combinedBlob.size < 10000) { // Skip very small audio files
+                // Skip processing if the audio is too short
+                if (combinedBlob.size < 10000) {
                     console.log("Audio segment too small, likely just background noise. Skipping transcription.");
+                    processingTranscription = false;
                     return;
                 }
                 
@@ -481,30 +496,27 @@
             const source = audioContext.createMediaStreamSource(stream);
             source.connect(analyser);
             
-            // Configure analyzer with more accurate settings
-            analyser.fftSize = 1024; // Increased from 256 for more detailed analysis
-            analyser.smoothingTimeConstant = 0.5; // Add smoothing to prevent rapid fluctuations
+            // Configure analyzer
+            analyser.fftSize = 1024;
+            analyser.smoothingTimeConstant = 0.5;
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
             
-            // Start silence detection with improved algorithm
+            // Start silence detection
             silenceDetectionInterval = setInterval(() => {
+                if (!recordingActive) return;
+                
                 analyser.getByteFrequencyData(dataArray);
                 
-                // Calculate average volume level with improved weighting for speech frequencies
+                // Calculate average volume level
                 let sum = 0;
                 let speechFrequencyWeight = 0;
                 let maxLevel = 0;
                 
-                // Give more weight to frequencies in human speech range (roughly 300-3000 Hz)
                 for (let i = 0; i < bufferLength; i++) {
-                    // Approximate frequency calculation
                     const frequency = i * audioContext.sampleRate / analyser.fftSize;
-                    
-                    // Track maximum level for noise floor detection
                     maxLevel = Math.max(maxLevel, dataArray[i]/255);
                     
-                    // Weight speech frequencies more heavily
                     let weight = 1.0;
                     if (frequency > 300 && frequency < 3000) {
                         weight = 1.5;
@@ -514,7 +526,6 @@
                     sum += dataArray[i] * weight;
                 }
                 
-                // Normalize with proper weighting
                 const weightedDivisor = bufferLength + (speechFrequencyWeight - bufferLength);
                 const average = sum / weightedDivisor / 255;
                 
@@ -523,25 +534,22 @@
                     updateVisualization(dataArray);
                 }
                 
-                // Check if audio level is above noise floor before considering it speech
                 const hasActualSpeech = maxLevel > noiseFloor;
                 
-                // Detect silence with improved algorithm
+                // Detect silence
                 if (average < silenceThreshold || !hasActualSpeech) {
                     if (!silenceStart) {
                         silenceStart = Date.now();
                     } else if (Date.now() - silenceStart > pauseDetectionDelay) {
                         console.log('Pause detected, splitting recording');
                         
-                        // Check recording duration to avoid processing very short segments
+                        // Check recording duration
                         const recordingDuration = Date.now() - mediaRecorder.startTime;
                         
-                        // Only proceed if we're still recording and have recorded for a meaningful duration
+                        // Only proceed if we're recording and have recorded for a meaningful duration
                         if (mediaRecorder && mediaRecorder.state === 'recording' && recordingDuration > minimumAudioDuration) {
-                            // Stop current recording
+                            // Stop current segment and let onstop handler start a new one
                             mediaRecorder.stop();
-                            
-                            // Reset silence detection
                             silenceStart = null;
                         }
                     }
@@ -593,59 +601,60 @@
             }
         }
 
-        function stopRecording(userInitiated = true) {
-            if (mediaRecorder && isRecording) {
-                console.log('Stopping recording...');
-                
-                // Stop audio analysis
-                if (silenceDetectionInterval) {
-                    clearInterval(silenceDetectionInterval);
-                    silenceDetectionInterval = null;
-                }
-                
-                if (audioContext) {
-                    audioContext.close().then(() => {
-                        console.log("Audio context closed");
-                    });
-                    audioContext = null;
-                    analyser = null;
-                }
-                
-                // Stop media recorder
+        function stopRecording() {
+            console.log('Stopping all recording...');
+            
+            // Set flag to stop recording
+            recordingActive = false;
+            isRecording = false;
+            
+            // Stop the current media recorder if it's running
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
-                
-                // Only update UI and state if user manually stopped recording
-                if (userInitiated) {
-                    isRecording = false;
-                    const micBtn = document.getElementById('micBtn');
-                    micBtn.style.background = '';
-                    
-                    // Close audio tracks
-                    if (audioStream) {
-                        audioStream.getTracks().forEach(track => track.stop());
-                        audioStream = null;
-                    }
-                    
-                    // Process any remaining audio immediately
-                    setTimeout(processPendingAudio, 100);
-                    
-                    // Remove visualization
-                    if (visualizationCanvas) {
-                        visualizationCanvas.remove();
-                        visualizationCanvas = null;
-                        canvasContext = null;
-                    }
-                }
-                
-                console.log('Recording stopped');
             }
+            
+            // Clean up audio analysis
+            if (silenceDetectionInterval) {
+                clearInterval(silenceDetectionInterval);
+                silenceDetectionInterval = null;
+            }
+            
+            if (audioContext) {
+                audioContext.close().then(() => {
+                    console.log("Audio context closed");
+                });
+                audioContext = null;
+                analyser = null;
+            }
+            
+            // Close audio tracks
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+            }
+            
+            // Update UI
+            const micBtn = document.getElementById('micBtn');
+            micBtn.style.background = '';
+            
+            // Process any remaining audio
+            setTimeout(processPendingAudio, 100);
+            
+            // Remove visualization
+            if (visualizationCanvas) {
+                visualizationCanvas.remove();
+                visualizationCanvas = null;
+                canvasContext = null;
+            }
+            
+            console.log('Recording stopped');
         }
 
         async function sendAudioForTranscription(audioBlob) {
             try {
                 // Check if the audio blob is empty
                 console.log('Audio blob size:', audioBlob.size);
-                if (audioBlob.size < 50000) {
+                if (audioBlob.size < 60000) {
                     console.error('No audio data recorded');
                     return;
                 }
