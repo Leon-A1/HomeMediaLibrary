@@ -42,8 +42,8 @@ ALLOWED_EXTENSIONS = {'epub'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
 ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 FINISHED_BOOKS_FILE = files_dir + "/finished_books.json"
-MAIN_PASSWORD = "main123"  # Password for most sections
-PRIVATE_PASSWORD = "123"  # Use the existing PASSWORD for locked and notebook sections
+MAIN_PASSWORD = ""  # Password for most sections
+PRIVATE_PASSWORD = ""  # Use the existing PASSWORD for locked and notebook sections
 
 
 # Add these global variables at the top of the file
@@ -222,16 +222,26 @@ def has_videos():
 def check_auth(section):
     """Check if user is authenticated for a specific section"""
     if section in ["locked", "notebook"]:
+        # Skip auth if private password is empty
+        if not PRIVATE_PASSWORD:
+            return True
         return session.get('authenticated_private', False)
     else:
+        # Skip auth if main password is empty
+        if not MAIN_PASSWORD:
+            return True
         return session.get('authenticated_main', False)
 
 def check_auth_any():
     """Check if user is authenticated for any section"""
+    # If both passwords are empty, user is effectively authenticated for everything
+    if not MAIN_PASSWORD and not PRIVATE_PASSWORD:
+        return True
     return session.get('authenticated_main', False) or session.get('authenticated_private', False)
     
 def has_protected_content():
-    return bool(PRIVATE_PASSWORD.strip()) 
+    """Check if there is any password protection enabled"""
+    return bool(MAIN_PASSWORD.strip() or PRIVATE_PASSWORD.strip())
 
 @app.route('/')
 def index():
@@ -1884,3 +1894,4 @@ if __name__ == '__main__':
             time.sleep(1)
     except KeyboardInterrupt:
         print("\nShutting down server...")
+
