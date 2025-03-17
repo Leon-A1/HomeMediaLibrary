@@ -232,6 +232,10 @@
         .result-error {
             background-color: rgba(255, 0, 0, 0.2);
         }
+
+        .type-select {
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -242,6 +246,14 @@
         
         <div class="upload-form">
             <div class="form-group">
+                <label for="type">File Type</label>
+                <select id="type" class="type-select">
+                    <option value="media">Photos & Videos</option>
+                    <option value="book">Books</option>
+                </select>
+            </div>
+
+            <div class="form-group folder-group">
                 <label for="folder">Destination Folder</label>
                 <div class="folder-input-container">
                     <select id="folder">
@@ -257,7 +269,7 @@
                     <label for="file" class="file-input-label">
                         <i class="fas fa-cloud-upload-alt"></i> Choose Files
                     </label>
-                    <input type="file" id="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.mp4,.avi,.mov,.mkv" multiple>
+                    <input type="file" id="file" class="file-input" multiple>
                 </div>
                 <div class="selected-files" id="selected-files" style="display: none;">
                     <!-- Selected files will be listed here -->
@@ -283,6 +295,8 @@
 
     <script>
         // DOM elements
+        const typeSelect = document.getElementById('type');
+        const folderGroup = document.querySelector('.folder-group');
         const folderSelect = document.getElementById('folder');
         const refreshFoldersBtn = document.getElementById('refresh-folders');
         const fileInput = document.getElementById('file');
@@ -294,6 +308,21 @@
         const messageDiv = document.getElementById('message');
         const resultsContainer = document.getElementById('results-container');
 
+        // Update file input accept attribute based on type
+        typeSelect.addEventListener('change', function() {
+            if (this.value === 'media') {
+                fileInput.accept = '.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov,.mkv';
+                folderGroup.style.display = 'block';
+            } else {
+                fileInput.accept = '.epub';
+                folderGroup.style.display = 'none';
+            }
+            // Clear any selected files
+            fileInput.value = '';
+            selectedFilesContainer.style.display = 'none';
+            uploadBtn.disabled = true;
+        });
+
         // Load folders when page loads
         loadFolders();
 
@@ -302,7 +331,6 @@
         uploadBtn.addEventListener('click', uploadFiles);
         refreshFoldersBtn.addEventListener('click', loadFolders);
 
-        // Functions
         function handleFileSelect() {
             const files = fileInput.files;
             if (files.length > 0) {
@@ -329,7 +357,8 @@
             const files = fileInput.files;
             if (files.length === 0) return;
             
-            const folder = folderSelect.value;
+            const type = typeSelect.value;
+            const folder = type === 'media' ? folderSelect.value : '';
             
             // Create FormData
             const formData = new FormData();
@@ -337,6 +366,7 @@
                 formData.append('file', files[i]);
             }
             formData.append('folder', folder);
+            formData.append('type', type);
             
             // Show progress
             progressContainer.style.display = 'block';
@@ -451,6 +481,9 @@
         function hideMessage() {
             messageDiv.style.display = 'none';
         }
+
+        // Initialize file input accept attribute
+        typeSelect.dispatchEvent(new Event('change'));
     </script>
 </body>
 </html> 

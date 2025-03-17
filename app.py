@@ -1431,12 +1431,18 @@ def upload_file():
         return jsonify({'success': False, 'message': 'No files selected'})
     
     folder = request.form.get('folder', '')
+    file_type = request.form.get('type', 'media')
     
-    # Determine the target directory
-    if folder:
-        target_dir = os.path.join(MEDIA_DIR, folder)
-    else:
-        target_dir = MEDIA_DIR
+    # Determine the target directory based on file type
+    if file_type == 'book':
+        target_dir = BOOK_DIR
+        allowed_extensions = ALLOWED_EXTENSIONS
+    else:  # media type
+        if folder:
+            target_dir = os.path.join(MEDIA_DIR, folder)
+        else:
+            target_dir = MEDIA_DIR
+        allowed_extensions = ALLOWED_PHOTO_EXTENSIONS.union(ALLOWED_VIDEO_EXTENSIONS)
     
     # Create directory if it doesn't exist
     os.makedirs(target_dir, exist_ok=True)
@@ -1446,16 +1452,11 @@ def upload_file():
         # Determine file extension and check if it's allowed
         extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
         
-        # Automatically detect file type based on extension
-        if extension in ALLOWED_PHOTO_EXTENSIONS:
-            file_type = 'photo'
-        elif extension in ALLOWED_VIDEO_EXTENSIONS:
-            file_type = 'video'
-        else:
+        if extension not in allowed_extensions:
             results.append({
                 'filename': file.filename,
                 'success': False,
-                'message': f'File type not allowed. Allowed types: {", ".join(list(ALLOWED_PHOTO_EXTENSIONS) + list(ALLOWED_VIDEO_EXTENSIONS))}'
+                'message': f'File type not allowed. Allowed types: {", ".join(allowed_extensions)}'
             })
             continue
         
